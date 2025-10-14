@@ -63,8 +63,8 @@ FAIMS455065_Rep1_nolocalized <- FAIMS455065_Rep1 |>
   filter(!str_detect(Peptide, 'C'))
 
 FAIMS455065_Rep1_bonafide <- bind_rows(
-  FAIMS404550_Rep1_localized,
-  FAIMS404550_Rep1_nolocalized
+  FAIMS455065_Rep1_localized,
+  FAIMS455065_Rep1_nolocalized
 )
 
 write_csv(
@@ -87,8 +87,8 @@ FAIMS455065_Rep2_nolocalized <- FAIMS455065_Rep2 |>
   filter(!str_detect(Peptide, 'C'))
 
 FAIMS455065_Rep2_bonafide <- bind_rows(
-  FAIMS404550_Rep2_localized,
-  FAIMS404550_Rep2_nolocalized
+  FAIMS455065_Rep2_localized,
+  FAIMS455065_Rep2_nolocalized
 )
 
 write_csv(
@@ -111,8 +111,8 @@ FAIMS455065_Rep3_nolocalized <- FAIMS455065_Rep3 |>
   filter(!str_detect(Peptide, 'C'))
 
 FAIMS455065_Rep3_bonafide <- bind_rows(
-  FAIMS404550_Rep3_localized,
-  FAIMS404550_Rep3_nolocalized
+  FAIMS455065_Rep3_localized,
+  FAIMS455065_Rep3_nolocalized
 )
 
 write_csv(

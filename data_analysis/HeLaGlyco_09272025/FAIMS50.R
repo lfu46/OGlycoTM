@@ -69,7 +69,7 @@ FAIMS50_Rep1_bonafide <- bind_rows(
 
 write_csv(
   FAIMS50_Rep1_bonafide,
-  file = '/Volumes/cos-lab-rwu60/Longping/HeLaGlyco_09272025/FAIMS45/OGlycoTM_EThcD_Search/FAIMS50_Rep1_bonafide.csv'
+  file = '/Volumes/cos-lab-rwu60/Longping/HeLaGlyco_09272025/FAIMS50/OGlycoTM_EThcD_Search/FAIMS50_Rep1_bonafide.csv'
 )
 
 # Rep2
@@ -93,7 +93,7 @@ FAIMS50_Rep2_bonafide <- bind_rows(
 
 write_csv(
   FAIMS50_Rep2_bonafide,
-  file = '/Volumes/cos-lab-rwu60/Longping/HeLaGlyco_09272025/FAIMS45/OGlycoTM_EThcD_Search/FAIMS50_Rep2_bonafide.csv'
+  file = '/Volumes/cos-lab-rwu60/Longping/HeLaGlyco_09272025/FAIMS50/OGlycoTM_EThcD_Search/FAIMS50_Rep2_bonafide.csv'
 )
 
 # Rep3
@@ -117,5 +117,5 @@ FAIMS50_Rep3_bonafide <- bind_rows(
 
 write_csv(
   FAIMS50_Rep3_bonafide,
-  file = '/Volumes/cos-lab-rwu60/Longping/HeLaGlyco_09272025/FAIMS45/OGlycoTM_EThcD_Search/FAIMS50_Rep3_bonafide.csv'
+  file = '/Volumes/cos-lab-rwu60/Longping/HeLaGlyco_09272025/FAIMS50/OGlycoTM_EThcD_Search/FAIMS50_Rep3_bonafide.csv'
 )
