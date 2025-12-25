@@ -1,9 +1,9 @@
-# import packages
+## import packages
 library(tidyverse)
 
 # import results from psm.tsv file
-OGlyco_Jurkat_raw <- read_tsv(
-  file = '/Volumes/cos-lab-rwu60/Longping/OGlycoTM_Jurkat/EThcD_OPair_Search_1/OGlycoTM_Jurkat/psm.tsv',
+OGlyco_HepG2_raw <- read_tsv(
+  file = '/Volumes/cos-lab-rwu60/Longping/OGlycoTM_HepG2/EThcD_OPair_Search_1/OGlycoTM_HepG2/psm.tsv',
   col_names = TRUE,
   name_repair = 'universal'
 ) |> 
@@ -23,7 +23,7 @@ OGlyco_Jurkat_raw <- read_tsv(
 ## data filtering
 ## exclude glycopeptides with localized sites on cysteine residues
 ## exclude glycopeptides that contain cysteine in their sequences but lack localized sites
-OGlyco_Jurkat_localized <- OGlyco_Jurkat_raw |> 
+OGlyco_HepG2_localized <- OGlyco_HepG2_raw |> 
   filter(Confidence.Level %in% c('Level1', 'Level1b')) |> 
   filter(
     !str_detect(Assigned.Modifications, 'C\\(555\\.2968\\)')
@@ -38,61 +38,61 @@ OGlyco_Jurkat_localized <- OGlyco_Jurkat_raw |>
     !str_detect(Assigned.Modifications, 'C\\(299\\.1230\\)')
   )
 
-OGlyco_Jurkat_nolocalized <- OGlyco_Jurkat_raw |> 
+OGlyco_HepG2_nolocalized <- OGlyco_HepG2_raw |> 
   filter(!Confidence.Level %in% c('Level1', 'Level1b')) |> 
   filter(!str_detect(Peptide, 'C'))
 
-OGlyco_Jurkat_bonafide <- bind_rows(
-  OGlyco_Jurkat_localized,
-  OGlyco_Jurkat_nolocalized
+OGlyco_HepG2_bonafide <- bind_rows(
+  OGlyco_HepG2_localized,
+  OGlyco_HepG2_nolocalized
 )
 
 write_csv(
-  OGlyco_Jurkat_bonafide,
-  file = '/Volumes/cos-lab-rwu60/Longping/OGlycoTM_Jurkat/EThcD_OPair_Search_1/OGlyco_Jurkat_bonafide.csv'
+  OGlyco_HepG2_bonafide,
+  file = '/Volumes/cos-lab-rwu60/Longping/OGlycoTM_HepG2/EThcD_OPair_Search_1/OGlyco_HepG2_bonafide.csv'
 )
 
 # import filtered results
 library(tidyverse)
 
-OGlyco_Jurkat_bonafide <- read_csv(
-  '/Volumes/cos-lab-rwu60/Longping/OGlycoTM_Jurkat/EThcD_OPair_Search_1/OGlyco_Jurkat_bonafide.csv'
+OGlyco_HepG2_bonafide <- read_csv(
+  '/Volumes/cos-lab-rwu60/Longping/OGlycoTM_HepG2/EThcD_OPair_Search_1/OGlyco_HepG2_bonafide.csv'
 )
 
 # check preliminary results
 # O-GlcNAc
-Total_GlycoPSM_OGlcNAc <- OGlyco_Jurkat_bonafide |> 
+Total_GlycoPSM_OGlcNAc <- OGlyco_HepG2_bonafide |> 
   filter(Total.Glycan.Composition %in% c('HexNAt(1)', 'HexNAt(1)TMT6plex(1)')) |> 
   nrow()
 
-Unique_Glycoprotein_OGlcNAc <- OGlyco_Jurkat_bonafide |> 
+Unique_Glycoprotein_OGlcNAc <- OGlyco_HepG2_bonafide |> 
   filter(Total.Glycan.Composition %in% c('HexNAt(1)', 'HexNAt(1)TMT6plex(1)')) |> 
   distinct(Protein.ID) |> 
   nrow()
 
 GlycoPSM_Glycoprotein_Results_OGlcNAc <- tibble(
   category = c('Total GlycoPSM', 'Unique Glycoprotein'),
-  number = c(6634, 691)
+  number = c(4963, 594)
 )
 
 # O-GalNAc
-Total_GlycoPSM_OGalNAc <- OGlyco_Jurkat_bonafide |> 
+Total_GlycoPSM_OGalNAc <- OGlyco_HepG2_bonafide |> 
   filter(Total.Glycan.Composition %in% c('HexNAt(1)GAO_Methoxylamine(1)', 'HexNAt(1)GAO_Methoxylamine(1)TMT6plex(1)')) |> 
   nrow()
 
-Unique_Glycoprotein_OGalNAc <- OGlyco_Jurkat_bonafide |> 
+Unique_Glycoprotein_OGalNAc <- OGlyco_HepG2_bonafide |> 
   filter(Total.Glycan.Composition %in% c('HexNAt(1)GAO_Methoxylamine(1)', 'HexNAt(1)GAO_Methoxylamine(1)TMT6plex(1)')) |> 
   distinct(Protein.ID) |> 
   nrow()
 
 GlycoPSM_Glycoprotein_Results_OGalNAc <- tibble(
   category = c('Total GlycoPSM', 'Unique Glycoprotein'),
-  number = c(1233, 246)
+  number = c(429, 128)
 )
 
 # check the total glycoPSM group by raw file
 # O-GlcNAc
-Total_GlycoPSM_OGlcNAc_by_raw_file <- OGlyco_Jurkat_bonafide |> 
+Total_GlycoPSM_OGlcNAc_by_raw_file <- OGlyco_HepG2_bonafide |> 
   filter(Total.Glycan.Composition %in% c('HexNAt(1)', 'HexNAt(1)TMT6plex(1)')) |> 
   mutate(
     raw_file = sub("\\..*", "", Spectrum)
@@ -102,7 +102,7 @@ Total_GlycoPSM_OGlcNAc_by_raw_file <- OGlyco_Jurkat_bonafide |>
   ungroup()
 
 # O-GalNAc
-Total_GlycoPSM_OGalNAc_by_raw_file <- OGlyco_Jurkat_bonafide |> 
+Total_GlycoPSM_OGalNAc_by_raw_file <- OGlyco_HepG2_bonafide |> 
   filter(Total.Glycan.Composition %in% c('HexNAt(1)GAO_Methoxylamine(1)', 'HexNAt(1)GAO_Methoxylamine(1)TMT6plex(1)')) |> 
   mutate(
     raw_file = sub("\\..*", "", Spectrum)
@@ -110,5 +110,3 @@ Total_GlycoPSM_OGalNAc_by_raw_file <- OGlyco_Jurkat_bonafide |>
   group_by(raw_file) |> 
   count() |> 
   ungroup()
-
-
