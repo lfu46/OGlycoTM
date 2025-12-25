@@ -98,7 +98,11 @@ OGlyco_HEK293T_bonafide_reassigned <- OGlyco_HEK293T_bonafide |>
     )
   ) |> 
   mutate(
-    PPM = Delta.Mass.Reassigned/Calculated.Peptide.Mass
+    PPM = if_else(
+      !is.na(Calculated.Peptide.Mass) & Calculated.Peptide.Mass > 0,
+      Delta.Mass.Reassigned / Calculated.Peptide.Mass,
+      NA_real_
+    )
   ) |>
   select(
     Spectrum,
