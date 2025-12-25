@@ -9,15 +9,17 @@ Preliminary_Results <- read_tsv(
 ) |> 
   filter(str_detect(Entry.Name, 'HUMAN')) |> 
   filter(!is.na(O.Pair.Score)) |> 
-  # mutate(
-  #   PPM = Delta.Mass/Observed.Mass
-  # ) |> 
-  filter(PPM < 10, PPM > -10) |> 
+  mutate(
+    PPM = Delta.Mass/Calculated.Peptide.Mass
+  ) |>
   select(
     Spectrum,
-    Peptide, Peptide.Length, Charge, Observed.Mass, Observed.M.Z, Delta.Mass, Hyperscore, Nextscore,
+    Peptide, Peptide.Length, Charge, 
+    Observed.Mass, Calculated.Peptide.Mass, Observed.M.Z, Delta.Mass, PPM, Hyperscore, Nextscore,
     Number.of.Enzymatic.Termini, Number.of.Missed.Cleavages, Protein.Start, Protein.End, 
-    Assigned.Modifications, O.Pair.Score:Paired.Scan.Num, Parent.Scan.Number,
+    Assigned.Modifications, O.Pair.Score:Site.Probabilities, 
+    Ratio.138.144 = ..138.144.Ratio,
+    Has.N.Glyc.Sequon, Paired.Scan.Num, Parent.Scan.Number,
     Protein.ID:Protein.Description
   )
 
@@ -56,39 +58,39 @@ write_csv(
 # import filtered results
 library(tidyverse)
 
-Preliminary_Results_bonafide <- read_csv(
-  '/Volumes/cos-lab-rwu60/Longping/OGlycoTM_HEK293T/OGlyco_HEK293T_Preliminary_Results/Preliminary_Results_bonafide.csv'
+OGlyco_HEK293T_bonafide_reassigned <- read_csv(
+  '/Volumes/cos-lab-rwu60/Longping/OGlycoTM_HEK293T/data_source/OGlyco_HEK293T_bonafide_reassigned.csv'
 )
 
 # check number of total glycoPSM and unique glycoprotein
 # O-GlcNAc
-Total_GlycoPSM_OGlcNAc <- Preliminary_Results_bonafide |> 
+Total_GlycoPSM_OGlcNAc <- OGlyco_HEK293T_bonafide_reassigned |> 
   filter(Total.Glycan.Composition %in% c('HexNAt(1)', 'HexNAt(1)TMT6plex(1)')) |> 
   nrow()
 
-Unique_Glycoprotein_OGlcNAc <- Preliminary_Results_bonafide |> 
+Unique_Glycoprotein_OGlcNAc <- OGlyco_HEK293T_bonafide_reassigned |> 
   filter(Total.Glycan.Composition %in% c('HexNAt(1)', 'HexNAt(1)TMT6plex(1)')) |> 
   distinct(Protein.ID) |> 
   nrow()
 
 GlycoPSM_Glycoprotein_Results_OGlcNAc <- tibble(
   category = c('Total GlycoPSM', 'Unique Glycoprotein'),
-  number = c(5651, 566)
+  number = c(9242, 738)
 )
 
 # O-GalNAc
-Total_GlycoPSM_OGalNAc <- Preliminary_Results_bonafide |> 
+Total_GlycoPSM_OGalNAc <- OGlyco_HEK293T_bonafide_reassigned |> 
   filter(Total.Glycan.Composition %in% c('HexNAt(1)GAO_Methoxylamine(1)', 'HexNAt(1)GAO_Methoxylamine(1)TMT6plex(1)')) |> 
   nrow()
 
-Unique_Glycoprotein_OGalNAc <- Preliminary_Results_bonafide |> 
+Unique_Glycoprotein_OGalNAc <- OGlyco_HEK293T_bonafide_reassigned |> 
   filter(Total.Glycan.Composition %in% c('HexNAt(1)GAO_Methoxylamine(1)', 'HexNAt(1)GAO_Methoxylamine(1)TMT6plex(1)')) |> 
   distinct(Protein.ID) |> 
   nrow()
 
 GlycoPSM_Glycoprotein_Results_OGalNAc <- tibble(
   category = c('Total GlycoPSM', 'Unique Glycoprotein'),
-  number = c(550, 129)
+  number = c(1143, 235)
 )
 
 # check number of localized and non-localized glycoPSM
@@ -105,7 +107,7 @@ Nonlocalized_GlycoPSM_OGlcNAc <- Preliminary_Results_bonafide |>
 
 Localized_Nonlocalized_Results_OGlcNAc <- tibble(
   category = c('Localized', 'Nonlocalized'),
-  number = c(552, 5099)
+  number = c(383, 569)
 )
 
 # O-GalNAc
@@ -121,7 +123,7 @@ Nonlocalized_GlycoPSM_OGalNAc <- Preliminary_Results_bonafide |>
 
 Localized_Nonlocalized_Results_OGalNAc <- tibble(
   category = c('Localized', 'Nonlocalized'),
-  number = c(137, 413)
+  number = c(320, 213)
 )
 
 # GO Enrichment Analysis
@@ -130,17 +132,17 @@ library(clusterProfiler)
 library(org.Hs.eg.db)
 
 Total_Glycoprotein <- Preliminary_Results_bonafide |> 
-  dplyr::select(Protein.ID) |> 
+  dplyr::distinct(Protein.ID) |> 
   pull()
 
 OGlcNAc_GLycoprotein <- Preliminary_Results_bonafide |> 
   filter(Total.Glycan.Composition %in% c('HexNAt(1)', 'HexNAt(1)TMT6plex(1)')) |> 
-  dplyr::select(Protein.ID) |> 
+  dplyr::distinct(Protein.ID) |> 
   pull()
 
 OGalNAc_GLycoprotein <- Preliminary_Results_bonafide |> 
   filter(Total.Glycan.Composition %in% c('HexNAt(1)GAO_Methoxylamine(1)', 'HexNAt(1)GAO_Methoxylamine(1)TMT6plex(1)')) |> 
-  dplyr::select(Protein.ID) |> 
+  dplyr::distinct(Protein.ID) |> 
   pull()
 
 OGlcNAc_GO <- enrichGO(
@@ -189,7 +191,7 @@ GlycoPSM_Glycoprotein_barplot <- GlycoPSM_Glycoprotein_combined |>
   ggplot(aes(x = category, y = number, fill = factor(modification, c('O-GlcNAc', 'O-GalNAc')))) +
   geom_col(position = "dodge", width = 0.7) +
   scale_fill_manual(values = c("O-GlcNAc" = "#1f77b4", "O-GalNAc" = "#ff7f0e")) +
-  ylim(0, 6000) +
+  ylim(0, 1000) +
   labs(
     x = NULL,
     y = "Count",
@@ -217,7 +219,7 @@ GlycoPSM_Evidence_barplot <- GlycoPSM_Evidence_combined |>
   ggplot(aes(x = category, y = number, fill = factor(modification, c('O-GlcNAc', 'O-GalNAc')))) +
   geom_col(position = "dodge", width = 0.7) +
   scale_fill_manual(values = c("O-GlcNAc" = "#1f77b4", "O-GalNAc" = "#ff7f0e")) +
-  ylim(0, 5500) +
+  ylim(0, 600) +
   labs(
     x = NULL,
     y = "# of glycoPSM",
