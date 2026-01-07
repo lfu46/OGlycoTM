@@ -13,29 +13,41 @@ output:
 knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
 ```
 
-# Figure 1: Workflow
+# Figure 1: Workflow (1/10/2026)
 
 <!-- Description of the OGlycoTM analysis workflow -->
 
-# Figure 2: Identification Results
+# Figure 2: Identification Results (1/7/2026)
+Figure 2A. Identification results for both O-GlcNAc and O-GalNAc in each cell type
+Figure 2B. Venn's diagram of localized O-GlcNAc sites across three cell types
 
-<!-- GlycoPSM and glycoprotein identification results -->
+Supplementary figure 1. Venn's diagram of localized O-GalNAc sites across three cell types
 
-# Figure 3: Quantification Results - Common Glycoproteins
+Figure 2C. Overlap with O-GlcNAc Atlas database
+
+Figure 2D. Percentage of the common and unique glycoprotein in each cell type
+Figure 2E. Functional enrichment analysis for O-GlcNAc and O-GalNAc proteins
+
+
+# Figure 3: Quantification Results - Common Glycoproteins (1/7/2026)
 
 <!-- Cross-cell line shared glycoprotein analysis -->
 
-# Figure 4: Quantification Results - Unique Glycoproteins
+# Figure 4: Quantification Results - Unique Glycoproteins (1/8/2026)
 
 <!-- Cell line-specific glycoprotein analysis -->
 
-# Figure 5: Site-Specific Analysis
+# Figure 5: Site-Specific Analysis (1/9/2026)
 
 <!-- Site localization and confidence level analysis -->
 
-# Figure 6: Tyrosine Glycosylation
+# Figure 6: Tyrosine Glycosylation (1/9/2026 & 1/10/2026)
 
 <!-- Tyrosine O-GlcNAc glycosylation analysis and literature comparison -->
+
+Summarize all the figures in slides and discuss with Ronghu (1/11/2026 & 1/12/2026)
+Revise the figures and manuscript (1/13/2026 - 1/16/2026)
+Complete the revision (1/20/2026)
 
 # Session Information
 
