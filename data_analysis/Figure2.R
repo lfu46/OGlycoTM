@@ -372,5 +372,143 @@ ggsave(
 
 
 # Figure 2D ---------------------------------------------------------------
-# 
+# Percentage of the common and unique glycoprotein in each cell type
+
+# Define colors for overlap categories
+colors_overlap <- c("Common" = "#4DBBD5", "Shared" = "grey", "Unique" = "#F39B7F")
+
+# Extract O-GlcNAc proteins from each cell type
+OGlcNAc_proteins_HEK293T <- OGlyco_HEK293T_bonafide |>
+  filter(Total.Glycan.Composition %in% c('HexNAt(1) % 299.1230', 'HexNAt(1)TMT6plex(1) % 528.2859')) |>
+  pull(Protein.ID) |>
+  unique()
+
+OGlcNAc_proteins_HepG2 <- OGlyco_HepG2_bonafide |>
+  filter(Total.Glycan.Composition %in% c('HexNAt(1) % 299.1230', 'HexNAt(1)TMT6plex(1) % 528.2859')) |>
+  pull(Protein.ID) |>
+  unique()
+
+OGlcNAc_proteins_Jurkat <- OGlyco_Jurkat_bonafide |>
+  filter(Total.Glycan.Composition %in% c('HexNAt(1) % 299.1230', 'HexNAt(1)TMT6plex(1) % 528.2859')) |>
+  pull(Protein.ID) |>
+  unique()
+
+# Extract O-GalNAc proteins from each cell type
+OGalNAc_proteins_HEK293T <- OGlyco_HEK293T_bonafide |>
+  filter(Total.Glycan.Composition %in% c('HexNAt(1)GAO_Methoxylamine(1) % 326.1339', 'HexNAt(1)GAO_Methoxylamine(1)TMT6plex(1) % 555.2968')) |>
+  pull(Protein.ID) |>
+  unique()
+
+OGalNAc_proteins_HepG2 <- OGlyco_HepG2_bonafide |>
+  filter(Total.Glycan.Composition %in% c('HexNAt(1)GAO_Methoxylamine(1) % 326.1339', 'HexNAt(1)GAO_Methoxylamine(1)TMT6plex(1) % 555.2968')) |>
+  pull(Protein.ID) |>
+  unique()
+
+OGalNAc_proteins_Jurkat <- OGlyco_Jurkat_bonafide |>
+  filter(Total.Glycan.Composition %in% c('HexNAt(1)GAO_Methoxylamine(1) % 326.1339', 'HexNAt(1)GAO_Methoxylamine(1)TMT6plex(1) % 555.2968')) |>
+  pull(Protein.ID) |>
+  unique()
+
+# Function to calculate overlap categories for each cell type
+calculate_overlap_categories <- function(proteins_target, proteins_other1, proteins_other2) {
+  # Common: in all 3 cell types
+  common <- intersect(intersect(proteins_target, proteins_other1), proteins_other2)
+
+  # Unique: only in target cell type
+  unique_proteins <- setdiff(setdiff(proteins_target, proteins_other1), proteins_other2)
+
+  # Shared: in exactly 2 cell types (target + one other)
+  in_target_and_other1 <- intersect(proteins_target, proteins_other1)
+  in_target_and_other2 <- intersect(proteins_target, proteins_other2)
+  shared <- setdiff(union(in_target_and_other1, in_target_and_other2), common)
+
+  total <- length(proteins_target)
+
+  data.frame(
+    category = c("Common", "Shared", "Unique"),
+    count = c(length(common), length(shared), length(unique_proteins)),
+    percentage = c(length(common), length(shared), length(unique_proteins)) / total * 100
+  )
+}
+
+# Calculate for O-GlcNAc
+OGlcNAc_HEK293T_overlap <- calculate_overlap_categories(
+  OGlcNAc_proteins_HEK293T, OGlcNAc_proteins_HepG2, OGlcNAc_proteins_Jurkat
+) |> mutate(cell_type = "HEK293T", glycan_type = "O-GlcNAc")
+
+OGlcNAc_HepG2_overlap <- calculate_overlap_categories(
+  OGlcNAc_proteins_HepG2, OGlcNAc_proteins_HEK293T, OGlcNAc_proteins_Jurkat
+) |> mutate(cell_type = "HepG2", glycan_type = "O-GlcNAc")
+
+OGlcNAc_Jurkat_overlap <- calculate_overlap_categories(
+  OGlcNAc_proteins_Jurkat, OGlcNAc_proteins_HEK293T, OGlcNAc_proteins_HepG2
+) |> mutate(cell_type = "Jurkat", glycan_type = "O-GlcNAc")
+
+# Calculate for O-GalNAc
+OGalNAc_HEK293T_overlap <- calculate_overlap_categories(
+  OGalNAc_proteins_HEK293T, OGalNAc_proteins_HepG2, OGalNAc_proteins_Jurkat
+) |> mutate(cell_type = "HEK293T", glycan_type = "O-GalNAc")
+
+OGalNAc_HepG2_overlap <- calculate_overlap_categories(
+  OGalNAc_proteins_HepG2, OGalNAc_proteins_HEK293T, OGalNAc_proteins_Jurkat
+) |> mutate(cell_type = "HepG2", glycan_type = "O-GalNAc")
+
+OGalNAc_Jurkat_overlap <- calculate_overlap_categories(
+  OGalNAc_proteins_Jurkat, OGalNAc_proteins_HEK293T, OGalNAc_proteins_HepG2
+) |> mutate(cell_type = "Jurkat", glycan_type = "O-GalNAc")
+
+# Combine all data
+Figure2D_df <- bind_rows(
+  OGlcNAc_HEK293T_overlap,
+  OGlcNAc_HepG2_overlap,
+  OGlcNAc_Jurkat_overlap,
+  OGalNAc_HEK293T_overlap,
+  OGalNAc_HepG2_overlap,
+  OGalNAc_Jurkat_overlap
+) |>
+  mutate(
+    category = factor(category, levels = c("Unique", "Shared", "Common")),
+    glycan_type = factor(glycan_type, levels = c("O-GlcNAc", "O-GalNAc")),
+    cell_type = factor(cell_type, levels = c("HEK293T", "HepG2", "Jurkat"))
+  )
+
+# Stacked bar plot
+Figure2D <- ggplot(Figure2D_df, aes(x = glycan_type, y = percentage, fill = category)) +
+  geom_bar(stat = "identity", position = "stack") +
+  geom_text(
+    aes(label = ifelse(category == "Shared", "", count)),
+    position = position_stack(vjust = 0.5),
+    size = 2,
+    color = "black"
+  ) +
+  facet_wrap(~cell_type, nrow = 1) +
+  scale_fill_manual(values = colors_overlap, breaks = c("Common", "Unique")) +
+  scale_y_continuous(expand = expansion(mult = c(0, 0.05))) +
+  labs(
+    x = NULL,
+    y = "Percentage (%)",
+    fill = NULL
+  ) +
+  theme_classic() +
+  theme(
+    title = element_text(family = "Helvetica", color = "black", size = 6),
+    text = element_text(family = "Helvetica", color = "black"),
+    axis.text = element_text(color = "black", size = 6),
+    axis.text.x = element_text(angle = 30, hjust = 1),
+    legend.key.size = unit(0.2, "cm"),
+    legend.text = element_text(size = 6),
+    legend.title = element_text(size = 6),
+    strip.background = element_blank(),
+    strip.text = element_text(size = 6)
+  )
+
+ggsave(
+  filename = paste0(figure_file_path, "Figure2/Figure2D.pdf"),
+  plot = Figure2D,
+  width = 2.5, height = 1.5, units = "in"
+)
+
+
+# Figure 2E ---------------------------------------------------------------
+
 
