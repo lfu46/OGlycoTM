@@ -3,6 +3,7 @@ library(tidyverse)
 
 # Figure 2. Identification of O-GlcNAc and O-GalNAc sites and proteins in HEK293T, HepG2 and Jurkat cells
 
+
 # Figure 2A ---------------------------------------------------------------
 # Indentification of O-GlcNAc and O-GalNAc proteins in three type of cells
 
@@ -107,6 +108,105 @@ ggsave(
   width = 2.5, height = 1.5, units = "in"
 )
 
+
 # Figure 2B ---------------------------------------------------------------
-# 
+# Localized O-GlcNAc sites in three types of cells
+
+# generate site index for localized O-GlcNAc and O-GalNAc
+# HEK293T
+OGlyco_site_HEK293T <- OGlyco_HEK293T_bonafide |> 
+  filter(
+    Confidence.Level %in% c('Level1', 'Level1b')
+  ) |> 
+  mutate(
+    peptide_site = as.numeric(str_extract(Site.Probabilities, "(?<=\\[)\\d+")),
+    site_number = Protein.Start + peptide_site - 1,
+    site_index = paste0(Protein.ID, "_", site_number),
+    glycan_type = case_when(
+      Total.Glycan.Composition %in% c('HexNAt(1) % 299.1230', 'HexNAt(1)TMT6plex(1) % 528.2859') ~ "O-GlcNAc",
+      Total.Glycan.Composition %in% c('HexNAt(1)GAO_Methoxylamine(1) % 326.1339', 'HexNAt(1)GAO_Methoxylamine(1)TMT6plex(1) % 555.2968') ~ "O-GalNAc"
+    )
+  )
+
+# HepG2
+OGlyco_site_HepG2 <- OGlyco_HepG2_bonafide |> 
+  filter(
+    Confidence.Level %in% c('Level1', 'Level1b')
+  ) |> 
+  mutate(
+    peptide_site = as.numeric(str_extract(Site.Probabilities, "(?<=\\[)\\d+")),
+    site_number = Protein.Start + peptide_site - 1,
+    site_index = paste0(Protein.ID, "_", site_number),
+    glycan_type = case_when(
+      Total.Glycan.Composition %in% c('HexNAt(1) % 299.1230', 'HexNAt(1)TMT6plex(1) % 528.2859') ~ "O-GlcNAc",
+      Total.Glycan.Composition %in% c('HexNAt(1)GAO_Methoxylamine(1) % 326.1339', 'HexNAt(1)GAO_Methoxylamine(1)TMT6plex(1) % 555.2968') ~ "O-GalNAc"
+    )
+  )
+
+# Jurkat
+OGlyco_site_Jurkat <- OGlyco_Jurkat_bonafide |> 
+  filter(
+    Confidence.Level %in% c('Level1', 'Level1b')
+  ) |> 
+  mutate(
+    peptide_site = as.numeric(str_extract(Site.Probabilities, "(?<=\\[)\\d+")),
+    site_number = Protein.Start + peptide_site - 1,
+    site_index = paste0(Protein.ID, "_", site_number),
+    glycan_type = case_when(
+      Total.Glycan.Composition %in% c('HexNAt(1) % 299.1230', 'HexNAt(1)TMT6plex(1) % 528.2859') ~ "O-GlcNAc",
+      Total.Glycan.Composition %in% c('HexNAt(1)GAO_Methoxylamine(1) % 326.1339', 'HexNAt(1)GAO_Methoxylamine(1)TMT6plex(1) % 555.2968') ~ "O-GalNAc"
+    )
+  )
+  
+# save to csv
+write_csv(OGlyco_site_HEK293T, paste0(source_file_path, "OGlyco_site_HEK293T.csv"))
+write_csv(OGlyco_site_HepG2, paste0(source_file_path, "OGlyco_site_HepG2.csv"))
+write_csv(OGlyco_site_Jurkat, paste0(source_file_path, "OGlyco_site_Jurkat.csv"))
+
+# Venn diagram for O-GlcNAc sites across three cell types
+library(eulerr)
+
+# pull unique O-GlcNAc site index from each cell type
+OGlcNAc_site_HEK293T <- OGlyco_site_HEK293T |>
+  filter(glycan_type == "O-GlcNAc") |>
+  pull(site_index) |>
+  unique()
+
+OGlcNAc_site_HepG2 <- OGlyco_site_HepG2 |>
+  filter(glycan_type == "O-GlcNAc") |>
+  pull(site_index) |>
+  unique()
+
+OGlcNAc_site_Jurkat <- OGlyco_site_Jurkat |>
+  filter(glycan_type == "O-GlcNAc") |>
+  pull(site_index) |>
+  unique()
+
+# create list for Venn diagram
+OGlcNAc_site_list <- list(
+  HEK293T = OGlcNAc_site_HEK293T,
+  HepG2 = OGlcNAc_site_HepG2,
+  Jurkat = OGlcNAc_site_Jurkat
+)
+
+# create euler object (proportional)
+OGlcNAc_euler <- euler(OGlcNAc_site_list)
+
+# Venn diagram
+Figure2B <- plot(
+  OGlcNAc_euler,
+  fills = list(fill = colors_cell, alpha = 0.5),
+  edges = list(col = "white", lwd = 2),
+  labels = list(font = 1, cex = 0.7, nudge = 0.2),
+  quantities = list(font = 1, cex = 0.7)
+)
+
+# save plot
+pdf(paste0(figure_file_path, "Figure2/Figure2B.pdf"), width = 2, height = 1.5)
+print(Figure2B)
+dev.off()
+
+
+# Figure 2C ---------------------------------------------------------------
+
 
