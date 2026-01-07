@@ -23,7 +23,7 @@ Figure 2B. Venn's diagram of localized O-GlcNAc sites across three cell types
 
 Supplementary figure 1. Venn's diagram of localized O-GalNAc sites across three cell types
 
-Figure 2C. Overlap with O-GlcNAc Atlas database
+Figure 2C. UniProt and O-GlcNAc Atlas annotation of O-GlcNAc sites identified in all cell types
 
 Figure 2D. Percentage of the common and unique glycoprotein in each cell type
 Figure 2E. Functional enrichment analysis for O-GlcNAc and O-GalNAc proteins

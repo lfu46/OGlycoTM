@@ -46,3 +46,16 @@ OGlyco_site_HepG2 <- read_csv(
 OGlyco_site_Jurkat <- read_csv(
   paste0(source_file_path, 'OGlyco_site_Jurkat.csv')
 )
+
+# OGlcNAc protein total
+OGlcNAc_protein_total <- read_csv(
+  paste0(source_file_path, 'OGlcNAc_protein_total.csv')
+)
+
+# OGlcNAc site total
+OGlcNAc_site_total <- read_csv(
+  paste0(source_file_path, 'OGlcNAc_site_total.csv')
+)
+
+
+
