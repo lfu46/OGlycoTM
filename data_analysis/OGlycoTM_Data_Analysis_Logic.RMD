@@ -1,0 +1,50 @@
+---
+title: "OGlycoTM Data Analysis"
+author: "Longping Fu"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    toc: true
+    toc_float: true
+    toc_depth: 3
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+```
+
+# Figure 1: Workflow
+
+<!-- Description of the OGlycoTM analysis workflow -->
+
+
+# Figure 2: Identification Results
+
+<!-- GlycoPSM and glycoprotein identification results -->
+
+
+# Figure 3: Quantification Results - Common Glycoproteins
+
+<!-- Cross-cell line shared glycoprotein analysis -->
+
+
+# Figure 4: Quantification Results - Unique Glycoproteins
+
+<!-- Cell line-specific glycoprotein analysis -->
+
+
+# Figure 5: Site-Specific Analysis
+
+<!-- Site localization and confidence level analysis -->
+
+
+# Figure 6: Tyrosine Glycosylation
+
+<!-- Tyrosine O-GlcNAc glycosylation analysis and literature comparison -->
+
+
+# Session Information
+
+```{r session-info}
+sessionInfo()
+```
