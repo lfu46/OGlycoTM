@@ -676,8 +676,8 @@ Figure2D_GO_plot <- ggplot(Figure2D_GO_df, aes(x = log_pvalue, y = Description))
   ) +
   # Dots
   geom_point(aes(size = Count, color = glycan_type)) +
-  # Facet by glycan type
-  facet_wrap(~glycan_type, scales = "free_y", ncol = 1) +
+  # Facet by glycan type (labels on right, space proportional to content)
+  facet_grid(rows = vars(glycan_type), scales = "free_y", space = "free_y") +
   # Colors
   scale_color_manual(values = colors_glycan) +
   # Size scale (smaller circles)
@@ -709,14 +709,13 @@ Figure2D_GO_plot <- ggplot(Figure2D_GO_df, aes(x = log_pvalue, y = Description))
 ggsave(
   filename = paste0(figure_file_path, "Figure2/Figure2D_GO_plot.pdf"),
   plot = Figure2D_GO_plot,
-  width = 2.5, height = 1.6, units = "in"
+  width = 2.5, height = 1.5, units = "in"
 )
 
 
-  # Figure 2E ---------------------------------------------------------------
-# Functional enrichment analysis for common O-GlcNAc and O-GalNAc proteins
-library(clusterProfiler)
-library(org.Hs.eg.db)
+# Figure 2E ---------------------------------------------------------------
+# Radial bar chart showing percentage of unique O-GlcNAc and O-GalNAc proteins in HEK293T
+# Functional enrichment analysis for unique O-GlcNAc and O-GalNAc proteins in HEK293T
 
 # Extract O-GlcNAc proteins from each cell type
 OGlcNAc_proteins_HEK293T <- OGlyco_HEK293T_bonafide |>
@@ -750,27 +749,147 @@ OGalNAc_proteins_Jurkat <- OGlyco_Jurkat_bonafide |>
   pull(Protein.ID) |>
   unique()
 
-# Extract common O-GlcNAc proteins (present in all 3 cell types)
-common_OGlcNAc_proteins <- intersect(
-  intersect(OGlcNAc_proteins_HEK293T, OGlcNAc_proteins_HepG2),
+# Calculate total proteins (union across all 3 cell types)
+total_OGlcNAc_proteins <- union(
+  union(OGlcNAc_proteins_HEK293T, OGlcNAc_proteins_HepG2),
   OGlcNAc_proteins_Jurkat
 )
 
-# Extract common O-GalNAc proteins (present in all 3 cell types)
-common_OGalNAc_proteins <- intersect(
-  intersect(OGalNAc_proteins_HEK293T, OGalNAc_proteins_HepG2),
+total_OGalNAc_proteins <- union(
+  union(OGalNAc_proteins_HEK293T, OGalNAc_proteins_HepG2),
   OGalNAc_proteins_Jurkat
 )
 
-# Define universe as union of common O-GlcNAc and O-GalNAc proteins
-universe_proteins <- union(common_OGlcNAc_proteins, common_OGalNAc_proteins)
+# Calculate unique HEK293T proteins (only in HEK293T, not in HepG2 or Jurkat)
+unique_OGlcNAc_HEK293T <- setdiff(
+  setdiff(OGlcNAc_proteins_HEK293T, OGlcNAc_proteins_HepG2),
+  OGlcNAc_proteins_Jurkat
+)
 
-## Gene Ontology analysis
-# Common O-GlcNAc proteins GO enrichment
-common_OGlcNAc_GO <- enrichGO(
-  gene = common_OGlcNAc_proteins,
+unique_OGalNAc_HEK293T <- setdiff(
+  setdiff(OGalNAc_proteins_HEK293T, OGalNAc_proteins_HepG2),
+  OGalNAc_proteins_Jurkat
+)
+
+# Calculate counts and percentages
+OGlcNAc_total_count <- length(total_OGlcNAc_proteins)
+OGlcNAc_unique_HEK293T_count <- length(unique_OGlcNAc_HEK293T)
+OGlcNAc_unique_HEK293T_pct <- OGlcNAc_unique_HEK293T_count / OGlcNAc_total_count * 100
+
+OGalNAc_total_count <- length(total_OGalNAc_proteins)
+OGalNAc_unique_HEK293T_count <- length(unique_OGalNAc_HEK293T)
+OGalNAc_unique_HEK293T_pct <- OGalNAc_unique_HEK293T_count / OGalNAc_total_count * 100
+
+# Create data for radial bar chart
+# Background rings (full circle, 0-100%)
+Figure2E_bg_df <- data.frame(
+  glycan_type = c("O-GlcNAc", "O-GalNAc"),
+  ymin = c(3, 2),
+  ymax = c(4, 3),
+  xmin = 0,
+  xmax = 100,
+  alpha_type = "Total"
+)
+
+# Filled arcs (unique HEK293T portion)
+Figure2E_fill_df <- data.frame(
+  glycan_type = c("O-GlcNAc", "O-GalNAc"),
+  ymin = c(3, 2),
+  ymax = c(4, 3),
+  xmin = 0,
+  xmax = c(OGlcNAc_unique_HEK293T_pct, OGalNAc_unique_HEK293T_pct),
+  unique_count = c(OGlcNAc_unique_HEK293T_count, OGalNAc_unique_HEK293T_count),
+  total_count = c(OGlcNAc_total_count, OGalNAc_total_count),
+  alpha_type = "Unique"
+)
+
+# Labels for total counts (at 12 o'clock position)
+Figure2E_total_labels <- data.frame(
+  glycan_type = c("O-GlcNAc", "O-GalNAc"),
+  x = 0,
+  y = c(3.5, 2.5),
+  label = c(OGlcNAc_total_count, OGalNAc_total_count)
+)
+
+# Labels for unique counts (at midpoint of filled arc)
+Figure2E_unique_labels <- data.frame(
+  glycan_type = c("O-GlcNAc", "O-GalNAc"),
+  x = c(OGlcNAc_unique_HEK293T_pct / 2, OGalNAc_unique_HEK293T_pct / 2),
+  y = c(3.5, 2.5),
+  label = c(OGlcNAc_unique_HEK293T_count, OGalNAc_unique_HEK293T_count)
+)
+
+# Create radial bar chart
+Figure2E <- ggplot() +
+  # Background rings (full circle) - light grey with black border
+  geom_rect(
+    data = Figure2E_bg_df,
+    aes(xmin = xmin, xmax = xmax, ymin = ymin, ymax = ymax),
+    fill = "grey90",
+    color = "black", linewidth = 0.2
+  ) +
+  # Filled arcs (unique portion) - glycan colors without border
+  geom_rect(
+    data = Figure2E_fill_df,
+    aes(xmin = xmin, xmax = xmax, ymin = ymin, ymax = ymax, fill = glycan_type),
+    color = "black", linewidth = 0.2
+  ) +
+  # Total count labels at 12 o'clock
+  geom_text(
+    data = Figure2E_total_labels,
+    aes(x = x, y = y, label = label),
+    size = 2,
+    color = "black",
+    hjust = 1
+  ) +
+  # Unique count labels
+  geom_text(
+    data = Figure2E_unique_labels,
+    aes(x = x, y = y, label = label),
+    size = 2,
+    color = "black"
+  ) +
+  scale_fill_manual(
+    values = colors_glycan,
+    labels = c("O-GalNAc", "O-GlcNAc")
+  ) +
+  scale_x_continuous(limits = c(0, 100)) +
+  scale_y_continuous(limits = c(0, 4.5)) +
+  coord_polar(theta = "x", start = 0, direction = 1) +
+  labs(fill = NULL) +
+  guides(
+    fill = guide_legend(nrow = 1)
+  ) +
+  theme_void() +
+  theme(
+    legend.position = "bottom",
+    legend.box = "horizontal",
+    legend.key.size = unit(0.15, 'cm'),
+    legend.key.height = unit(0.15, 'cm'),
+    legend.key.width = unit(0.15, 'cm'),
+    legend.text = element_text(family = "Helvetica", size = 5),
+    legend.spacing.x = unit(0.1, 'cm'),
+    legend.spacing.y = unit(0, 'cm'),
+    legend.box.spacing = unit(0.05, 'cm'),
+    legend.margin = margin(0, 0, 0, 0),
+    plot.margin = margin(2, 2, 2, 2)
+  )
+
+ggsave(
+  filename = paste0(figure_file_path, "Figure2/Figure2E.pdf"),
+  plot = Figure2E,
+  width = 1.5, height = 1.5, units = "in"
+)
+
+# Functional enrichment analysis for unique O-GlcNAc and O-GalNAc proteins in HEK293T
+library(clusterProfiler)
+library(org.Hs.eg.db)
+
+## Gene Ontology analysis for unique O-GlcNAc proteins in HEK293T
+unique_OGlcNAc_HEK293T_GO <- enrichGO(
+  gene = unique_OGlcNAc_HEK293T,
   OrgDb = org.Hs.eg.db,
-  universe = universe_proteins,
+  universe = total_OGlcNAc_proteins,
   keyType = 'UNIPROT',
   ont = 'ALL',
   pvalueCutoff = 1,
@@ -778,15 +897,15 @@ common_OGlcNAc_GO <- enrichGO(
 )
 
 write_csv(
-  common_OGlcNAc_GO@result,
-  paste0(source_file_path, 'common_OGlcNAc_GO.csv')
+  unique_OGlcNAc_HEK293T_GO@result,
+  paste0(source_file_path, 'unique_OGlcNAc_HEK293T_GO.csv')
 )
 
-# Common O-GalNAc proteins GO enrichment
-common_OGalNAc_GO <- enrichGO(
-  gene = common_OGalNAc_proteins,
+## Gene Ontology analysis for unique O-GalNAc proteins in HEK293T
+unique_OGalNAc_HEK293T_GO <- enrichGO(
+  gene = unique_OGalNAc_HEK293T,
   OrgDb = org.Hs.eg.db,
-  universe = universe_proteins,
+  universe = total_OGalNAc_proteins,
   keyType = 'UNIPROT',
   ont = 'ALL',
   pvalueCutoff = 1,
@@ -794,188 +913,132 @@ common_OGalNAc_GO <- enrichGO(
 )
 
 write_csv(
-  common_OGalNAc_GO@result,
-  paste0(source_file_path, 'common_OGalNAc_GO.csv')
+  unique_OGalNAc_HEK293T_GO@result,
+  paste0(source_file_path, 'unique_OGalNAc_HEK293T_GO.csv')
 )
 
-## KEGG analysis
-# Common O-GlcNAc proteins KEGG enrichment
-common_OGlcNAc_KEGG <- enrichKEGG(
-  gene = common_OGlcNAc_proteins,
+## KEGG analysis for unique O-GlcNAc proteins in HEK293T
+unique_OGlcNAc_HEK293T_KEGG <- enrichKEGG(
+  gene = unique_OGlcNAc_HEK293T,
   organism = 'hsa',
   keyType = 'uniprot',
-  universe = universe_proteins,
+  universe = total_OGlcNAc_proteins,
   pvalueCutoff = 1,
   qvalueCutoff = 1
 )
 
 write_csv(
-  common_OGlcNAc_KEGG@result,
-  paste0(source_file_path, 'common_OGlcNAc_KEGG.csv')
+  unique_OGlcNAc_HEK293T_KEGG@result,
+  paste0(source_file_path, 'unique_OGlcNAc_HEK293T_KEGG.csv')
 )
 
-# Common O-GalNAc proteins KEGG enrichment
-common_OGalNAc_KEGG <- enrichKEGG(
-  gene = common_OGalNAc_proteins,
+## KEGG analysis for unique O-GalNAc proteins in HEK293T
+unique_OGalNAc_HEK293T_KEGG <- enrichKEGG(
+  gene = unique_OGalNAc_HEK293T,
   organism = 'hsa',
   keyType = 'uniprot',
-  universe = universe_proteins,
+  universe = total_OGalNAc_proteins,
   pvalueCutoff = 1,
   qvalueCutoff = 1
 )
 
 write_csv(
-  common_OGalNAc_KEGG@result,
-  paste0(source_file_path, 'common_OGalNAc_KEGG.csv')
+  unique_OGalNAc_HEK293T_KEGG@result,
+  paste0(source_file_path, 'unique_OGalNAc_HEK293T_KEGG.csv')
 )
 
-## Alternative background: all identified glycoproteins
-## (Commented out - using original approach with union of common proteins)
-# # Define universe as all O-GlcNAc and O-GalNAc proteins across all cell types
-# total_OGlcNAc_proteins <- union(
-#   union(OGlcNAc_proteins_HEK293T, OGlcNAc_proteins_HepG2),
-#   OGlcNAc_proteins_Jurkat
-# )
-#
-# total_OGalNAc_proteins <- union(
-#   union(OGalNAc_proteins_HEK293T, OGalNAc_proteins_HepG2),
-#   OGalNAc_proteins_Jurkat
-# )
-#
-# universe_allGlyco <- union(total_OGlcNAc_proteins, total_OGalNAc_proteins)
-#
-# ## Gene Ontology analysis (all glycoproteins as background)
-# # Common O-GlcNAc proteins GO enrichment
-# common_OGlcNAc_GO_allGlyco <- enrichGO(
-#   gene = common_OGlcNAc_proteins,
-#   OrgDb = org.Hs.eg.db,
-#   universe = universe_allGlyco,
-#   keyType = 'UNIPROT',
-#   ont = 'ALL',
-#   pvalueCutoff = 1,
-#   qvalueCutoff = 1
-# )
-#
-# write_csv(
-#   common_OGlcNAc_GO_allGlyco@result,
-#   paste0(source_file_path, 'common_OGlcNAc_GO_allGlyco.csv')
-# )
-#
-# # Common O-GalNAc proteins GO enrichment
-# common_OGalNAc_GO_allGlyco <- enrichGO(
-#   gene = common_OGalNAc_proteins,
-#   OrgDb = org.Hs.eg.db,
-#   universe = universe_allGlyco,
-#   keyType = 'UNIPROT',
-#   ont = 'ALL',
-#   pvalueCutoff = 1,
-#   qvalueCutoff = 1
-# )
-#
-# write_csv(
-#   common_OGalNAc_GO_allGlyco@result,
-#   paste0(source_file_path, 'common_OGalNAc_GO_allGlyco.csv')
-# )
-#
-# ## KEGG analysis (all glycoproteins as background)
-# # Common O-GlcNAc proteins KEGG enrichment
-# common_OGlcNAc_KEGG_allGlyco <- enrichKEGG(
-#   gene = common_OGlcNAc_proteins,
-#   organism = 'hsa',
-#   keyType = 'uniprot',
-#   universe = universe_allGlyco,
-#   pvalueCutoff = 1,
-#   qvalueCutoff = 1
-# )
-#
-# write_csv(
-#   common_OGlcNAc_KEGG_allGlyco@result,
-#   paste0(source_file_path, 'common_OGlcNAc_KEGG_allGlyco.csv')
-# )
-#
-# # Common O-GalNAc proteins KEGG enrichment
-# common_OGalNAc_KEGG_allGlyco <- enrichKEGG(
-#   gene = common_OGalNAc_proteins,
-#   organism = 'hsa',
-#   keyType = 'uniprot',
-#   universe = universe_allGlyco,
-#   pvalueCutoff = 1,
-#   qvalueCutoff = 1
-# )
-#
-# write_csv(
-#   common_OGalNAc_KEGG_allGlyco@result,
-#   paste0(source_file_path, 'common_OGalNAc_KEGG_allGlyco.csv')
-# )
+# import functional enrichment results of unique O-GlcNAc and O-GalNAc in HEK293T
+unique_OGlcNAc_HEK293T_GO_selected <- read_csv(
+  '/Volumes/cos-lab-rwu60/Longping/OGlycoTM_Final_Version/data_source/unique_OGlcNAc_HEK293T_GO.csv'
+) |>
+  filter(
+    Description %in% c(
+      'chaperone-mediated protein folding',
+      'cell cycle process',
+      'epithelial cell proliferation'
+    )
+  ) |>
+  select(
+    Description, pvalue, Count
+  ) |>
+  mutate(
+    log_pvalue = -log10(pvalue),
+    glycan_type = "O-GlcNAc"
+  )
 
-## Alternative background: glycan-type-specific total proteins
-## (Commented out - using original approach with union of common proteins)
-# # Use total_OGlcNAc_proteins for O-GlcNAc analysis
-# # Use total_OGalNAc_proteins for O-GalNAc analysis
-#
-# ## Gene Ontology analysis (glycan-type-specific background)
-# # Common O-GlcNAc proteins GO enrichment
-# common_OGlcNAc_GO_totalOGlcNAc <- enrichGO(
-#   gene = common_OGlcNAc_proteins,
-#   OrgDb = org.Hs.eg.db,
-#   universe = total_OGlcNAc_proteins,
-#   keyType = 'UNIPROT',
-#   ont = 'ALL',
-#   pvalueCutoff = 1,
-#   qvalueCutoff = 1
-# )
-#
-# write_csv(
-#   common_OGlcNAc_GO_totalOGlcNAc@result,
-#   paste0(source_file_path, 'common_OGlcNAc_GO_totalOGlcNAc.csv')
-# )
-#
-# # Common O-GalNAc proteins GO enrichment
-# common_OGalNAc_GO_totalOGalNAc <- enrichGO(
-#   gene = common_OGalNAc_proteins,
-#   OrgDb = org.Hs.eg.db,
-#   universe = total_OGalNAc_proteins,
-#   keyType = 'UNIPROT',
-#   ont = 'ALL',
-#   pvalueCutoff = 1,
-#   qvalueCutoff = 1
-# )
-#
-# write_csv(
-#   common_OGalNAc_GO_totalOGalNAc@result,
-#   paste0(source_file_path, 'common_OGalNAc_GO_totalOGalNAc.csv')
-# )
-#
-# ## KEGG analysis (glycan-type-specific background)
-# # Common O-GlcNAc proteins KEGG enrichment
-# common_OGlcNAc_KEGG_totalOGlcNAc <- enrichKEGG(
-#   gene = common_OGlcNAc_proteins,
-#   organism = 'hsa',
-#   keyType = 'uniprot',
-#   universe = total_OGlcNAc_proteins,
-#   pvalueCutoff = 1,
-#   qvalueCutoff = 1
-# )
-#
-# write_csv(
-#   common_OGlcNAc_KEGG_totalOGlcNAc@result,
-#   paste0(source_file_path, 'common_OGlcNAc_KEGG_totalOGlcNAc.csv')
-# )
-#
-# # Common O-GalNAc proteins KEGG enrichment
-# common_OGalNAc_KEGG_totalOGalNAc <- enrichKEGG(
-#   gene = common_OGalNAc_proteins,
-#   organism = 'hsa',
-#   keyType = 'uniprot',
-#   universe = total_OGalNAc_proteins,
-#   pvalueCutoff = 1,
-#   qvalueCutoff = 1
-# )
-#
-# write_csv(
-#   common_OGalNAc_KEGG_totalOGalNAc@result,
-#   paste0(source_file_path, 'common_OGalNAc_KEGG_totalOGalNAc.csv')
-# )
+unique_OGalNAc_HEK293T_GO_selected <- read_csv(
+  '/Volumes/cos-lab-rwu60/Longping/OGlycoTM_Final_Version/data_source/unique_OGalNAc_HEK293T_GO.csv'
+) |>
+  filter(
+    Description %in% c(
+      'cytosol',
+      'membraneless organelle'
+    )
+  ) |>
+  select(
+    Description, pvalue, Count
+  ) |>
+  mutate(
+    log_pvalue = -log10(pvalue),
+    glycan_type = "O-GalNAc"
+  )
+
+# Combine O-GlcNAc and O-GalNAc selected terms
+Figure2E_GO_df <- bind_rows(
+  unique_OGlcNAc_HEK293T_GO_selected,
+  unique_OGalNAc_HEK293T_GO_selected
+) |>
+  mutate(
+    glycan_type = factor(glycan_type, levels = c("O-GlcNAc", "O-GalNAc")),
+    Description = str_wrap(Description, width = 30)
+  )
+
+# Dot plot for functional enrichment
+Figure2E_GO_plot <- ggplot(Figure2E_GO_df, aes(x = log_pvalue, y = Description)) +
+  # Horizontal dashed lines
+  geom_segment(
+    aes(x = 0, xend = Inf, y = Description, yend = Description),
+    linetype = "dashed",
+    color = "grey70",
+    linewidth = 0.3
+  ) +
+  # Dots
+  geom_point(aes(size = Count, color = glycan_type)) +
+  # Facet by glycan type (space proportional to content)
+  facet_grid(rows = vars(glycan_type), scales = "free_y", space = "free_y") +
+  # Colors
+  scale_color_manual(values = colors_glycan) +
+  # Size scale
+  scale_size_continuous(range = c(1, 4)) +
+  # X-axis
+  scale_x_continuous(expand = expansion(mult = c(0, 0.1))) +
+  # Labels
+  labs(
+    x = expression(-log[10]('p value')),
+    y = NULL,
+    color = NULL,
+    size = "Count"
+  ) +
+  theme_classic() +
+  theme(
+    text = element_text(family = "Helvetica", color = "black"),
+    axis.text = element_text(color = "black", size = 6),
+    axis.text.y = element_text(lineheight = 0.6),
+    axis.title = element_text(size = 6),
+    strip.background = element_blank(),
+    strip.text = element_text(size = 6),
+    legend.key.size = unit(0.2, 'cm'),
+    legend.text = element_text(size = 5),
+    legend.title = element_text(size = 5),
+    legend.position = "right"
+  ) +
+  guides(color = "none")
+
+ggsave(
+  filename = paste0(figure_file_path, "Figure2/Figure2E_GO_plot.pdf"),
+  plot = Figure2E_GO_plot,
+  width = 2.5, height = 1.5, units = "in"
+)
 
 
 # Figure 2F ---------------------------------------------------------------
