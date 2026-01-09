@@ -54,17 +54,17 @@ classify_glycoproteins <- function(df, cell_type) {
  # Save to CSV files
  write_csv(
    exclusive_OGlcNAc_peptides,
-   paste0(source_file_path, "exclusive_OGlcNAc_", cell_type, ".csv")
+   paste0(source_file_path, "classification/exclusive_OGlcNAc_", cell_type, ".csv")
  )
 
  write_csv(
    exclusive_OGalNAc_peptides,
-   paste0(source_file_path, "exclusive_OGalNAc_", cell_type, ".csv")
+   paste0(source_file_path, "classification/exclusive_OGalNAc_", cell_type, ".csv")
  )
 
  write_csv(
    dual_labeled_peptides,
-   paste0(source_file_path, "dual_labeled_", cell_type, ".csv")
+   paste0(source_file_path, "classification/dual_labeled_", cell_type, ".csv")
  )
 
  # Return summary statistics

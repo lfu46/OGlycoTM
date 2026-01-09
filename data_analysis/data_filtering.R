@@ -31,7 +31,7 @@ OGlyco_HEK293T_bonafide <- bind_rows(
 
 write_csv(
   OGlyco_HEK293T_bonafide,
-  file = paste0(source_file_path, 'OGlyco_HEK293T_bonafide.csv')
+  file = paste0(source_file_path, 'filtered/OGlyco_HEK293T_bonafide.csv')
 )
 
 # HepG2
@@ -63,7 +63,7 @@ OGlyco_HepG2_bonafide <- bind_rows(
 
 write_csv(
   OGlyco_HepG2_bonafide,
-  file = paste0(source_file_path, 'OGlyco_HepG2_bonafide.csv')
+  file = paste0(source_file_path, 'filtered/OGlyco_HepG2_bonafide.csv')
 )
 
 # Jurkat
@@ -95,7 +95,7 @@ OGlyco_Jurkat_bonafide <- bind_rows(
 
 write_csv(
   OGlyco_Jurkat_bonafide,
-  file = paste0(source_file_path, 'OGlyco_Jurkat_bonafide.csv')
+  file = paste0(source_file_path, 'filtered/OGlyco_Jurkat_bonafide.csv')
 )
 
 

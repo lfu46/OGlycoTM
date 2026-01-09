@@ -25,7 +25,7 @@ OGlyco_HEK293T_raw <- read_tsv(
 
 write_csv(
   OGlyco_HEK293T_raw,
-  file = '/Volumes/cos-lab-rwu60/Longping/OGlycoTM_Final_Version/data_source/OGlyco_HEK293T_raw.csv'
+  file = '/Volumes/cos-lab-rwu60/Longping/OGlycoTM_Final_Version/data_source/raw/OGlyco_HEK293T_raw.csv'
 )
 
 # HepG2
@@ -51,7 +51,7 @@ OGlyco_HepG2_raw <- read_tsv(
 
 write_csv(
   OGlyco_HepG2_raw,
-  file = '/Volumes/cos-lab-rwu60/Longping/OGlycoTM_Final_Version/data_source/OGlyco_HepG2_raw.csv'
+  file = '/Volumes/cos-lab-rwu60/Longping/OGlycoTM_Final_Version/data_source/raw/OGlyco_HepG2_raw.csv'
 )
 
 # Jurkat
@@ -77,5 +77,5 @@ OGlyco_Jurkat_raw <- read_tsv(
 
 write_csv(
   OGlyco_Jurkat_raw,
-  file = '/Volumes/cos-lab-rwu60/Longping/OGlycoTM_Final_Version/data_source/OGlyco_Jurkat_raw.csv'
+  file = '/Volumes/cos-lab-rwu60/Longping/OGlycoTM_Final_Version/data_source/raw/OGlyco_Jurkat_raw.csv'
 )

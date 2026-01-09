@@ -172,9 +172,9 @@ OGlyco_site_Jurkat <- OGlyco_Jurkat_bonafide |>
   )
 
 # save to csv
-write_csv(OGlyco_site_HEK293T, paste0(source_file_path, "OGlyco_site_HEK293T.csv"))
-write_csv(OGlyco_site_HepG2, paste0(source_file_path, "OGlyco_site_HepG2.csv"))
-write_csv(OGlyco_site_Jurkat, paste0(source_file_path, "OGlyco_site_Jurkat.csv"))
+write_csv(OGlyco_site_HEK293T, paste0(source_file_path, "site/OGlyco_site_HEK293T.csv"))
+write_csv(OGlyco_site_HepG2, paste0(source_file_path, "site/OGlyco_site_HepG2.csv"))
+write_csv(OGlyco_site_Jurkat, paste0(source_file_path, "site/OGlyco_site_Jurkat.csv"))
 
 # Venn diagram for O-GlcNAc sites across three cell types
 library(eulerr)
@@ -323,27 +323,27 @@ cat("Sum of categories:", verify_total, "\n")
 # Save protein lists to CSV
 write_csv(
   data.frame(Protein.ID = total_OGlcNAc_proteins),
-  paste0(source_file_path, 'OGlcNAc_protein_total.csv')
+  paste0(source_file_path, 'protein_lists/OGlcNAc_protein_total.csv')
 )
 write_csv(
   data.frame(Protein.ID = common_OGlcNAc_proteins),
-  paste0(source_file_path, 'common_OGlcNAc_proteins.csv')
+  paste0(source_file_path, 'protein_lists/common_OGlcNAc_proteins.csv')
 )
 write_csv(
   data.frame(Protein.ID = unique_OGlcNAc_HEK293T),
-  paste0(source_file_path, 'unique_OGlcNAc_HEK293T.csv')
+  paste0(source_file_path, 'protein_lists/unique_OGlcNAc_HEK293T.csv')
 )
 write_csv(
   data.frame(Protein.ID = unique_OGlcNAc_HepG2),
-  paste0(source_file_path, 'unique_OGlcNAc_HepG2.csv')
+  paste0(source_file_path, 'protein_lists/unique_OGlcNAc_HepG2.csv')
 )
 write_csv(
   data.frame(Protein.ID = unique_OGlcNAc_Jurkat),
-  paste0(source_file_path, 'unique_OGlcNAc_Jurkat.csv')
+  paste0(source_file_path, 'protein_lists/unique_OGlcNAc_Jurkat.csv')
 )
 write_csv(
   data.frame(Protein.ID = shared_OGlcNAc_proteins),
-  paste0(source_file_path, 'shared_OGlcNAc_proteins.csv')
+  paste0(source_file_path, 'protein_lists/shared_OGlcNAc_proteins.csv')
 )
 
 # Define colors for donut chart
@@ -418,7 +418,7 @@ library(Biostrings)
 
 # Get reviewed human proteome as background from UniProt FASTA file
 human_proteome_fasta <- readAAStringSet(
-  paste0(source_file_path, 'uniprotkb_reviewed_true_AND_model_organ_2026_01_09.fasta')
+  paste0(source_file_path, 'reference/uniprotkb_reviewed_true_AND_model_organ_2026_01_09.fasta')
 )
 
 # Extract UniProt IDs from FASTA headers (format: >sp|P12345|GENE_HUMAN ...)
@@ -439,7 +439,7 @@ common_OGlcNAc_GO <- enrichGO(
 
 write_csv(
   common_OGlcNAc_GO@result,
-  paste0(source_file_path, 'Figure2C_common_OGlcNAc_GO.csv')
+  paste0(source_file_path, 'enrichment/Figure2C_common_OGlcNAc_GO.csv')
 )
 
 ## GO enrichment for unique HEK293T O-GlcNAc proteins (background: total O-GlcNAc)
@@ -455,7 +455,7 @@ unique_HEK293T_OGlcNAc_GO <- enrichGO(
 
 write_csv(
   unique_HEK293T_OGlcNAc_GO@result,
-  paste0(source_file_path, 'Figure2C_unique_HEK293T_OGlcNAc_GO.csv')
+  paste0(source_file_path, 'enrichment/Figure2C_unique_HEK293T_OGlcNAc_GO.csv')
 )
 
 ## GO enrichment for unique HepG2 O-GlcNAc proteins (background: total O-GlcNAc)
@@ -471,7 +471,7 @@ unique_HepG2_OGlcNAc_GO <- enrichGO(
 
 write_csv(
   unique_HepG2_OGlcNAc_GO@result,
-  paste0(source_file_path, 'Figure2C_unique_HepG2_OGlcNAc_GO.csv')
+  paste0(source_file_path, 'enrichment/Figure2C_unique_HepG2_OGlcNAc_GO.csv')
 )
 
 ## GO enrichment for unique Jurkat O-GlcNAc proteins (background: total O-GlcNAc)
@@ -487,14 +487,14 @@ unique_Jurkat_OGlcNAc_GO <- enrichGO(
 
 write_csv(
   unique_Jurkat_OGlcNAc_GO@result,
-  paste0(source_file_path, 'Figure2C_unique_Jurkat_OGlcNAc_GO.csv')
+  paste0(source_file_path, 'enrichment/Figure2C_unique_Jurkat_OGlcNAc_GO.csv')
 )
 
 # Import and select GO terms for dot plot (fill in terms after reviewing results)
 # Common O-GlcNAc proteins (separate plot on left side)
 # Select 3 terms per ontology (BP, MF, CC) = 9 terms total
 common_OGlcNAc_GO_selected <- read_csv(
-  paste0(source_file_path, 'Figure2C_common_OGlcNAc_GO.csv')
+  paste0(source_file_path, 'enrichment/Figure2C_common_OGlcNAc_GO.csv')
 ) |>
   filter(
     Description %in% c(
@@ -521,7 +521,7 @@ common_OGlcNAc_GO_selected <- read_csv(
 
 # Unique HEK293T O-GlcNAc proteins (select 3 terms)
 unique_HEK293T_GO_selected <- read_csv(
-  paste0(source_file_path, 'Figure2C_unique_HEK293T_OGlcNAc_GO.csv')
+  paste0(source_file_path, 'enrichment/Figure2C_unique_HEK293T_OGlcNAc_GO.csv')
 ) |>
   filter(
     Description %in% c(
@@ -539,7 +539,7 @@ unique_HEK293T_GO_selected <- read_csv(
 
 # Unique HepG2 O-GlcNAc proteins (select 3 terms)
 unique_HepG2_GO_selected <- read_csv(
-  paste0(source_file_path, 'Figure2C_unique_HepG2_OGlcNAc_GO.csv')
+  paste0(source_file_path, 'enrichment/Figure2C_unique_HepG2_OGlcNAc_GO.csv')
 ) |>
   filter(
     Description %in% c(
@@ -557,7 +557,7 @@ unique_HepG2_GO_selected <- read_csv(
 
 # Unique Jurkat O-GlcNAc proteins (select 3 terms)
 unique_Jurkat_GO_selected <- read_csv(
-  paste0(source_file_path, 'Figure2C_unique_Jurkat_OGlcNAc_GO.csv')
+  paste0(source_file_path, 'enrichment/Figure2C_unique_Jurkat_OGlcNAc_GO.csv')
 ) |>
   filter(
     Description %in% c(
@@ -852,7 +852,7 @@ common_OGlcNAc_GO <- enrichGO(
 
 write_csv(
   common_OGlcNAc_GO@result,
-  paste0(source_file_path, 'common_OGlcNAc_GO.csv')
+  paste0(source_file_path, 'enrichment/common_OGlcNAc_GO.csv')
 )
 
 # Common O-GalNAc proteins GO enrichment
@@ -868,7 +868,7 @@ common_OGalNAc_GO <- enrichGO(
 
 write_csv(
   common_OGalNAc_GO@result,
-  paste0(source_file_path, 'common_OGalNAc_GO.csv')
+  paste0(source_file_path, 'enrichment/common_OGalNAc_GO.csv')
 )
 
 ## KEGG analysis
@@ -884,7 +884,7 @@ common_OGlcNAc_KEGG <- enrichKEGG(
 
 write_csv(
   common_OGlcNAc_KEGG@result,
-  paste0(source_file_path, 'common_OGlcNAc_KEGG.csv')
+  paste0(source_file_path, 'enrichment/common_OGlcNAc_KEGG.csv')
 )
 
 # Common O-GalNAc proteins KEGG enrichment
@@ -899,12 +899,12 @@ common_OGalNAc_KEGG <- enrichKEGG(
 
 write_csv(
   common_OGalNAc_KEGG@result,
-  paste0(source_file_path, 'common_OGalNAc_KEGG.csv')
+  paste0(source_file_path, 'enrichment/common_OGalNAc_KEGG.csv')
 )
 
 # import functional enrichment results of common O-GlcNAc and O-GalNAc
 common_OGlcNAc_GO_selected <- read_csv(
-  '/Volumes/cos-lab-rwu60/Longping/OGlycoTM_Final_Version/data_source/common_OGlcNAc_GO.csv'
+  paste0(source_file_path, 'enrichment/common_OGlcNAc_GO.csv')
 ) |>
   filter(
     Description %in% c(
@@ -922,7 +922,7 @@ common_OGlcNAc_GO_selected <- read_csv(
   )
 
 common_OGalNAc_GO_selected <- read_csv(
-  '/Volumes/cos-lab-rwu60/Longping/OGlycoTM_Final_Version/data_source/common_OGalNAc_GO.csv'
+  paste0(source_file_path, 'enrichment/common_OGalNAc_GO.csv')
 ) |>
   filter(
     Description %in% c(
