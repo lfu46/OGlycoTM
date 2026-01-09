@@ -20,24 +20,11 @@ knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
 
 <!-- Description of the OGlycoTM analysis workflow -->
 
-# Figure 2: Identification Results (1/7/2026 & 1/8/2026)
+# Figure 2: Identification Results (1/7/2026 & 1/8/2026 & 1/9/2026)
 
-Figure 2A. Identification results for both O-GlcNAc and O-GalNAc in each
-cell type Figure 2B. Venn's diagram of localized O-GlcNAc sites across
-three cell types
-
-Supplementary figure 1. Venn's diagram of localized O-GalNAc sites
-across three cell types
-
-Figure 2C. UniProt and O-GlcNAc Atlas annotation of O-GlcNAc sites
-identified in all cell types Figure 2D. Percentage of the common
-O-GlcNAc and O-GalNAc proteins with their functional enrichment analysis
-Figure 2E. Percentage of the unique O-GlcNAc and O-GalNAc proteins in
-HEK293T with their functional enrichment analysis Figure 2F. Percentage
-of the unique O-GlcNAc and O-GalNAc proteins in HepG2 with their
-functional enrichment analysis Figure 2G. Percentage of the unique
-O-GlcNAc and O-GalNAc proteins in Jurkat with their functional
-enrichment analysis
+Figure 2A. Identification results for both O-GlcNAc and O-GalNAc in each cell type 
+Figure 2B. Venn's diagram of localized O-GlcNAc sites across three cell types
+Figure 2C. Percentage of the common and unique O-GlcNAc proteins with their functional enrichment analysis
 
 # Figure 3: Quantification Results - Common Glycoproteins (1/8/2026)
 

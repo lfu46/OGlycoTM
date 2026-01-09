@@ -5,90 +5,100 @@ library(tidyverse)
 
 
 # Figure 2A ---------------------------------------------------------------
-# Indentification of O-GlcNAc and O-GalNAc proteins in three type of cells
+# Identification of O-GlcNAc proteins in three types of cells
+# Stacked bar: common (grey) at bottom, cell-type specific (colored) on top
 
-# Number of unique O-GlcNAcylated protein
-# HEK293T
-OGlcNAc_protein_unique_number_HEK293T <- OGlyco_HEK293T_bonafide |> 
-  filter(
-    Total.Glycan.Composition %in% c('HexNAt(1) % 299.1230', 'HexNAt(1)TMT6plex(1) % 528.2859')
-  ) |> 
-  distinct(Protein.ID) |> 
-  nrow()
+# Extract O-GlcNAc proteins from each cell type
+OGlcNAc_proteins_HEK293T <- OGlyco_HEK293T_bonafide |>
+  filter(Total.Glycan.Composition %in% c('HexNAt(1) % 299.1230', 'HexNAt(1)TMT6plex(1) % 528.2859')) |>
+  pull(Protein.ID) |>
+  unique()
 
-# HepG2
-OGlcNAc_protein_unique_number_HepG2 <- OGlyco_HepG2_bonafide |> 
-  filter(
-    Total.Glycan.Composition %in% c('HexNAt(1) % 299.1230', 'HexNAt(1)TMT6plex(1) % 528.2859')
-  ) |> 
-  distinct(Protein.ID) |> 
-  nrow()
+OGlcNAc_proteins_HepG2 <- OGlyco_HepG2_bonafide |>
+  filter(Total.Glycan.Composition %in% c('HexNAt(1) % 299.1230', 'HexNAt(1)TMT6plex(1) % 528.2859')) |>
+  pull(Protein.ID) |>
+  unique()
 
-# Jurkat
-OGlcNAc_protein_unique_number_Jurkat <- OGlyco_Jurkat_bonafide |> 
-  filter(
-    Total.Glycan.Composition %in% c('HexNAt(1) % 299.1230', 'HexNAt(1)TMT6plex(1) % 528.2859')
-  ) |> 
-  distinct(Protein.ID) |> 
-  nrow()
+OGlcNAc_proteins_Jurkat <- OGlyco_Jurkat_bonafide |>
+  filter(Total.Glycan.Composition %in% c('HexNAt(1) % 299.1230', 'HexNAt(1)TMT6plex(1) % 528.2859')) |>
+  pull(Protein.ID) |>
+  unique()
 
-# Number of unique O-GalNAcylated protein
-# HEK293T
-OGalNAc_protein_unique_number_HEK293T <- OGlyco_HEK293T_bonafide |> 
-  filter(
-    Total.Glycan.Composition %in% c('HexNAt(1)GAO_Methoxylamine(1) % 326.1339', 'HexNAt(1)GAO_Methoxylamine(1)TMT6plex(1) % 555.2968')
-  ) |> 
-  distinct(Protein.ID) |> 
-  nrow()
+# Calculate common O-GlcNAc proteins (intersection of all 3 cell types)
+common_OGlcNAc_proteins <- intersect(
+  intersect(OGlcNAc_proteins_HEK293T, OGlcNAc_proteins_HepG2),
+  OGlcNAc_proteins_Jurkat
+)
+common_count <- length(common_OGlcNAc_proteins)
 
-# HepG2
-OGalNAc_protein_unique_number_HepG2 <- OGlyco_HepG2_bonafide |> 
-  filter(
-    Total.Glycan.Composition %in% c('HexNAt(1)GAO_Methoxylamine(1) % 326.1339', 'HexNAt(1)GAO_Methoxylamine(1)TMT6plex(1) % 555.2968')
-  ) |> 
-  distinct(Protein.ID) |> 
-  nrow()
+# Calculate total and non-common counts for each cell type
+HEK293T_total <- length(OGlcNAc_proteins_HEK293T)
+HepG2_total <- length(OGlcNAc_proteins_HepG2)
+Jurkat_total <- length(OGlcNAc_proteins_Jurkat)
 
-# Jurkat
-OGalNAc_protein_unique_number_Jurkat <- OGlyco_Jurkat_bonafide |> 
-  filter(
-    Total.Glycan.Composition %in% c('HexNAt(1)GAO_Methoxylamine(1) % 326.1339', 'HexNAt(1)GAO_Methoxylamine(1)TMT6plex(1) % 555.2968')
-  ) |> 
-  distinct(Protein.ID) |> 
-  nrow()
+HEK293T_noncommon <- HEK293T_total - common_count
+HepG2_noncommon <- HepG2_total - common_count
+Jurkat_noncommon <- Jurkat_total - common_count
 
-# summary of the identification results
+# Create data frame for stacked bar plot
+# Common (grey) at bottom, cell-type specific (colored) on top
 Figure2A_df <- data.frame(
-  cell_type = rep(c("HEK293T", "HepG2", "Jurkat"), 2),
-  glycan_type = factor(
-    c(rep("O-GlcNAc", 3), rep("O-GalNAc", 3)),
-    levels = c("O-GlcNAc", "O-GalNAc")
+  cell_type = factor(
+    rep(c("HEK293T", "HepG2", "Jurkat"), each = 2),
+    levels = c("HEK293T", "HepG2", "Jurkat")
+  ),
+  category = factor(
+    rep(c("Common", "Cell-specific"), 3),
+    levels = c("Common", "Cell-specific")
   ),
   protein_count = c(
-    OGlcNAc_protein_unique_number_HEK293T,
-    OGlcNAc_protein_unique_number_HepG2,
-    OGlcNAc_protein_unique_number_Jurkat,
-    OGalNAc_protein_unique_number_HEK293T,
-    OGalNAc_protein_unique_number_HepG2,
-    OGalNAc_protein_unique_number_Jurkat
+    common_count, HEK293T_noncommon,
+    common_count, HepG2_noncommon,
+    common_count, Jurkat_noncommon
+  ),
+  fill_color = factor(
+    c(
+      "Common", "HEK293T",
+      "Common", "HepG2",
+      "Common", "Jurkat"
+    ),
+    levels = c("Common", "HEK293T", "HepG2", "Jurkat")
   )
 )
 
-# barplot
-Figure2A <- ggplot(Figure2A_df, aes(x = cell_type, y = protein_count, fill = glycan_type)) +
-  geom_bar(stat = "identity", position = "dodge") +
+# Define colors: grey for common, cell-type colors for specific
+Figure2A_colors <- c(
+  "Common" = "grey70",
+  "HEK293T" = "#4DBBD5",
+  "HepG2" = "#F39B7F",
+  "Jurkat" = "#00A087"
+)
+
+# Calculate total counts for labels
+Figure2A_totals <- data.frame(
+  cell_type = factor(c("HEK293T", "HepG2", "Jurkat"), levels = c("HEK293T", "HepG2", "Jurkat")),
+  total = c(HEK293T_total, HepG2_total, Jurkat_total)
+)
+
+# Stacked barplot
+Figure2A <- ggplot(Figure2A_df, aes(x = cell_type, y = protein_count, fill = fill_color)) +
+  geom_bar(stat = "identity", position = position_stack(reverse = TRUE)) +
   geom_text(
-    aes(label = protein_count),
-    position = position_dodge(width = 0.9),
+    data = Figure2A_totals,
+    aes(x = cell_type, y = total, label = total, fill = NULL),
     vjust = -0.2,
     size = 2,
     color = "black"
   ) +
-  scale_fill_manual(values = colors_glycan) +
+  scale_fill_manual(
+    values = Figure2A_colors,
+    breaks = c("Common", "HEK293T", "HepG2", "Jurkat"),
+    labels = c("Common", "HEK293T", "HepG2", "Jurkat")
+  ) +
   scale_y_continuous(expand = expansion(mult = c(0, 0.1))) +
   labs(
     x = NULL,
-    y = "No. of unique glycoproteins",
+    y = "No. of O-GlcNAc proteins",
     fill = NULL
   ) +
   theme_classic() +
@@ -97,7 +107,7 @@ Figure2A <- ggplot(Figure2A_df, aes(x = cell_type, y = protein_count, fill = gly
     text = element_text(family = "Helvetica", color = "black"),
     axis.text = element_text(color = "black", size = 6),
     axis.text.x = element_text(angle = 30, hjust = 1),
-    legend.key.size = unit(0.4, "cm"),
+    legend.key.size = unit(0.2, "cm"),
     legend.text = element_text(size = 6),
     legend.title = element_text(size = 6)
   )
@@ -105,7 +115,7 @@ Figure2A <- ggplot(Figure2A_df, aes(x = cell_type, y = protein_count, fill = gly
 ggsave(
   filename = paste0(figure_file_path, "Figure2/Figure2A.pdf"),
   plot = Figure2A,
-  width = 2.5, height = 1.5, units = "in"
+  width = 2, height = 1.5, units = "in"
 )
 
 
@@ -185,23 +195,36 @@ OGlcNAc_site_Jurkat <- OGlyco_site_Jurkat |>
   pull(site_index) |>
   unique()
 
-# create list for Venn diagram
+# create list for Venn diagram with counts in labels
 OGlcNAc_site_list <- list(
-  HEK293T = OGlcNAc_site_HEK293T,
-  HepG2 = OGlcNAc_site_HepG2,
-  Jurkat = OGlcNAc_site_Jurkat
+  OGlcNAc_site_HEK293T,
+  OGlcNAc_site_HepG2,
+  OGlcNAc_site_Jurkat
+)
+names(OGlcNAc_site_list) <- c(
+  paste0("HEK293T (", length(OGlcNAc_site_HEK293T), ")"),
+  paste0("HepG2 (", length(OGlcNAc_site_HepG2), ")"),
+  paste0("Jurkat (", length(OGlcNAc_site_Jurkat), ")")
 )
 
 # create euler object (proportional)
 OGlcNAc_euler <- euler(OGlcNAc_site_list)
 
 # Venn diagram
+# Create color vector with updated names
+Figure2B_colors <- c(
+  colors_cell["HEK293T"],
+  colors_cell["HepG2"],
+  colors_cell["Jurkat"]
+)
+names(Figure2B_colors) <- names(OGlcNAc_site_list)
+
 Figure2B <- plot(
   OGlcNAc_euler,
-  fills = list(fill = colors_cell, alpha = 0.5),
+  fills = list(fill = Figure2B_colors, alpha = 0.5),
   edges = list(col = "white", lwd = 2),
-  labels = list(font = 1, cex = 0.7, nudge = 0.2),
-  quantities = list(font = 1, cex = 0.7)
+  labels = list(font = 1, cex = 0.5),
+  quantities = list(font = 1, cex = 0.5)
 )
 
 # save plot
