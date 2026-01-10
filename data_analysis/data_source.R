@@ -101,5 +101,3 @@ OGlcNAc_site_total <- read_csv(
   paste0(source_file_path, 'protein_lists/OGlcNAc_site_total.csv')
 )
 
-
-
