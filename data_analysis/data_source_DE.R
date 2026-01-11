@@ -42,3 +42,17 @@ OGlcNAc_protein_commonly_up <- read_csv(
 OGlcNAc_protein_commonly_down <- read_csv(
   paste0(source_file_path, 'differential_analysis/OGlcNAc_protein_commonly_down.csv')
 )
+
+# =============================================================================
+# Whole Proteome Protein Level Differential Analysis Results
+# =============================================================================
+
+WP_protein_DE_HEK293T <- read_csv(
+  paste0(source_file_path, 'differential_analysis/WP_protein_DE_HEK293T.csv')
+)
+WP_protein_DE_HepG2 <- read_csv(
+  paste0(source_file_path, 'differential_analysis/WP_protein_DE_HepG2.csv')
+)
+WP_protein_DE_Jurkat <- read_csv(
+  paste0(source_file_path, 'differential_analysis/WP_protein_DE_Jurkat.csv')
+)

@@ -270,3 +270,128 @@ write_csv(commonly_up, paste0(output_dir, 'OGlcNAc_protein_commonly_up.csv'))
 write_csv(commonly_down, paste0(output_dir, 'OGlcNAc_protein_commonly_down.csv'))
 
 cat("\nCommonly regulated protein lists saved to:", output_dir, "\n")
+
+
+# =============================================================================
+# Whole Proteome Differential Analysis
+# =============================================================================
+
+# Load normalized WP data
+WP_protein_norm_HEK293T <- read_csv(
+  paste0(source_file_path, 'normalization/WP_protein_norm_HEK293T.csv')
+)
+WP_protein_norm_HepG2 <- read_csv(
+  paste0(source_file_path, 'normalization/WP_protein_norm_HepG2.csv')
+)
+WP_protein_norm_Jurkat <- read_csv(
+  paste0(source_file_path, 'normalization/WP_protein_norm_Jurkat.csv')
+)
+
+# Define metadata columns for WP
+WP_metadata_cols <- c("Gene.Symbol", "Protein.ID", "Protein.MWT.kDa.", "Annotation")
+
+# HEK293T
+WP_protein_DE_HEK293T <- run_limma_DE(
+  data = WP_protein_norm_HEK293T,
+  id_col = "UniProt_Accession",
+  metadata_cols = WP_metadata_cols,
+  intensity_cols = intensity_cols,
+  design_matrix = Experiment_Model,
+  contrast_matrix = Contrast_Matrix
+)
+
+# HepG2
+WP_protein_DE_HepG2 <- run_limma_DE(
+  data = WP_protein_norm_HepG2,
+  id_col = "UniProt_Accession",
+  metadata_cols = WP_metadata_cols,
+  intensity_cols = intensity_cols,
+  design_matrix = Experiment_Model,
+  contrast_matrix = Contrast_Matrix
+)
+
+# Jurkat
+WP_protein_DE_Jurkat <- run_limma_DE(
+  data = WP_protein_norm_Jurkat,
+  id_col = "UniProt_Accession",
+  metadata_cols = WP_metadata_cols,
+  intensity_cols = intensity_cols,
+  design_matrix = Experiment_Model,
+  contrast_matrix = Contrast_Matrix
+)
+
+# Save WP differential analysis results
+write_csv(WP_protein_DE_HEK293T, paste0(source_file_path, 'differential_analysis/WP_protein_DE_HEK293T.csv'))
+write_csv(WP_protein_DE_HepG2, paste0(source_file_path, 'differential_analysis/WP_protein_DE_HepG2.csv'))
+write_csv(WP_protein_DE_Jurkat, paste0(source_file_path, 'differential_analysis/WP_protein_DE_Jurkat.csv'))
+
+cat("\nWhole Proteome differential analysis complete!\n")
+
+# =============================================================================
+# Whole Proteome Summary Statistics
+# =============================================================================
+
+cat("\n=== Whole Proteome Summary (Tuni vs Ctrl) ===\n")
+summarize_DE(WP_protein_DE_HEK293T, "  HEK293T")
+summarize_DE(WP_protein_DE_HepG2, "  HepG2")
+summarize_DE(WP_protein_DE_Jurkat, "  Jurkat")
+
+# =============================================================================
+# Whole Proteome Commonly Regulated Proteins
+# =============================================================================
+
+# Function to classify WP proteins (uses UniProt_Accession as ID)
+classify_WP_DE <- function(de_result, fc_threshold = 0.5, pval_threshold = 0.05) {
+  de_result %>%
+    mutate(
+      DE_status = case_when(
+        logFC > fc_threshold & adj.P.Val < pval_threshold ~ "up",
+        logFC < -fc_threshold & adj.P.Val < pval_threshold ~ "down",
+        TRUE ~ "ns"
+      )
+    ) %>%
+    select(UniProt_Accession, DE_status)
+}
+
+# Classify WP proteins in each cell type
+WP_DE_class_HEK293T <- classify_WP_DE(WP_protein_DE_HEK293T) %>%
+  rename(DE_HEK293T = DE_status)
+WP_DE_class_HepG2 <- classify_WP_DE(WP_protein_DE_HepG2) %>%
+  rename(DE_HepG2 = DE_status)
+WP_DE_class_Jurkat <- classify_WP_DE(WP_protein_DE_Jurkat) %>%
+  rename(DE_Jurkat = DE_status)
+
+# Combine classifications
+WP_DE_combined <- WP_DE_class_HEK293T %>%
+  full_join(WP_DE_class_HepG2, by = "UniProt_Accession") %>%
+  full_join(WP_DE_class_Jurkat, by = "UniProt_Accession")
+
+# Count up/down occurrences for each protein
+WP_DE_combined <- WP_DE_combined %>%
+  mutate(
+    n_up = (DE_HEK293T == "up") + (DE_HepG2 == "up") + (DE_Jurkat == "up"),
+    n_down = (DE_HEK293T == "down") + (DE_HepG2 == "down") + (DE_Jurkat == "down")
+  )
+
+# Commonly upregulated: up in ≥2 cell types AND down in 0 cell types
+WP_commonly_up <- WP_DE_combined %>%
+  filter(n_up >= 2 & n_down == 0)
+
+# Commonly downregulated: down in ≥2 cell types AND up in 0 cell types
+WP_commonly_down <- WP_DE_combined %>%
+  filter(n_down >= 2 & n_up == 0)
+
+cat("\n=== Whole Proteome Commonly Regulated Proteins (|logFC| > 0.5, adj.P.Val < 0.05) ===\n")
+cat("Definition: Up/down in ≥2 cell types AND not down/up in the other\n\n")
+cat("Commonly upregulated proteins:", nrow(WP_commonly_up), "\n")
+cat("  - Up in all 3 cell types:", sum(WP_commonly_up$n_up == 3), "\n")
+cat("  - Up in 2 cell types:", sum(WP_commonly_up$n_up == 2), "\n")
+cat("\nCommonly downregulated proteins:", nrow(WP_commonly_down), "\n")
+cat("  - Down in all 3 cell types:", sum(WP_commonly_down$n_down == 3), "\n")
+cat("  - Down in 2 cell types:", sum(WP_commonly_down$n_down == 2), "\n")
+
+# Save WP commonly regulated protein lists
+write_csv(WP_commonly_up, paste0(source_file_path, 'differential_analysis/WP_protein_commonly_up.csv'))
+write_csv(WP_commonly_down, paste0(source_file_path, 'differential_analysis/WP_protein_commonly_down.csv'))
+
+cat("\nWhole Proteome commonly regulated protein lists saved to:", source_file_path, "differential_analysis/\n")

@@ -101,3 +101,14 @@ OGlcNAc_site_total <- read_csv(
   paste0(source_file_path, 'protein_lists/OGlcNAc_site_total.csv')
 )
 
+# Whole proteome protein level quantification data
+WP_protein_quant_HEK293T <- read_csv(
+  paste0(source_file_path, 'quantification/WP_protein_quant_HEK293T.csv')
+)
+WP_protein_quant_HepG2 <- read_csv(
+  paste0(source_file_path, 'quantification/WP_protein_quant_HepG2.csv')
+)
+WP_protein_quant_Jurkat <- read_csv(
+  paste0(source_file_path, 'quantification/WP_protein_quant_Jurkat.csv')
+)
+

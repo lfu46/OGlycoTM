@@ -6,12 +6,16 @@ library(edgeR)
 source("data_source.R")
 
 
-# Define intensity columns ------------------------------------------------
+# ==============================================================================
+# Define Intensity Columns
+# ==============================================================================
 intensity_cols <- c("Intensity.Tuni_1", "Intensity.Tuni_2", "Intensity.Tuni_3",
                     "Intensity.Ctrl_4", "Intensity.Ctrl_5", "Intensity.Ctrl_6")
 
 
-# Filtering function ------------------------------------------------------
+# ==============================================================================
+# Filtering Function
+# ==============================================================================
 # Removes entries with 0 or NA in any intensity column
 
 filter_zero_na <- function(data, intensity_cols) {
@@ -20,7 +24,9 @@ filter_zero_na <- function(data, intensity_cols) {
 }
 
 
-# Normalization function --------------------------------------------------
+# ==============================================================================
+# Normalization Function
+# ==============================================================================
 # Performs sample loading (SL) normalization followed by TMM normalization
 # Keeps all original columns plus adds _sl and _sl_tmm columns
 
@@ -64,7 +70,9 @@ normalize_intensity <- function(data,
 }
 
 
-# O-GlcNAc protein level filtering and normalization ----------------------
+# ==============================================================================
+# O-GlcNAc Protein Level Filtering and Normalization
+# ==============================================================================
 
 # HEK293T
 OGlcNAc_protein_filtered_HEK293T <- filter_zero_na(OGlcNAc_protein_quant_HEK293T, intensity_cols)
@@ -115,7 +123,9 @@ write_csv(
 )
 
 
-# O-GlcNAc site level filtering and normalization -------------------------
+# ==============================================================================
+# O-GlcNAc Site Level Filtering and Normalization
+# ==============================================================================
 
 # HEK293T
 OGlcNAc_site_filtered_HEK293T <- filter_zero_na(OGlcNAc_site_quant_HEK293T, intensity_cols)
@@ -166,7 +176,62 @@ write_csv(
 )
 
 
-# Verification: Check column sums -----------------------------------------
+# ==============================================================================
+# Whole Proteome Protein Level Filtering and Normalization
+# ==============================================================================
+
+# HEK293T
+WP_protein_filtered_HEK293T <- filter_zero_na(WP_protein_quant_HEK293T, intensity_cols)
+cat("WP HEK293T protein: ", nrow(WP_protein_quant_HEK293T), " -> ", nrow(WP_protein_filtered_HEK293T), " after filtering\n")
+
+write_csv(
+  WP_protein_filtered_HEK293T,
+  paste0(source_file_path, "quantification/WP_protein_filtered_HEK293T.csv")
+)
+
+WP_protein_norm_HEK293T <- normalize_intensity(WP_protein_filtered_HEK293T)
+
+write_csv(
+  WP_protein_norm_HEK293T,
+  paste0(source_file_path, "normalization/WP_protein_norm_HEK293T.csv")
+)
+
+# HepG2
+WP_protein_filtered_HepG2 <- filter_zero_na(WP_protein_quant_HepG2, intensity_cols)
+cat("WP HepG2 protein: ", nrow(WP_protein_quant_HepG2), " -> ", nrow(WP_protein_filtered_HepG2), " after filtering\n")
+
+write_csv(
+  WP_protein_filtered_HepG2,
+  paste0(source_file_path, "quantification/WP_protein_filtered_HepG2.csv")
+)
+
+WP_protein_norm_HepG2 <- normalize_intensity(WP_protein_filtered_HepG2)
+
+write_csv(
+  WP_protein_norm_HepG2,
+  paste0(source_file_path, "normalization/WP_protein_norm_HepG2.csv")
+)
+
+# Jurkat
+WP_protein_filtered_Jurkat <- filter_zero_na(WP_protein_quant_Jurkat, intensity_cols)
+cat("WP Jurkat protein: ", nrow(WP_protein_quant_Jurkat), " -> ", nrow(WP_protein_filtered_Jurkat), " after filtering\n")
+
+write_csv(
+  WP_protein_filtered_Jurkat,
+  paste0(source_file_path, "quantification/WP_protein_filtered_Jurkat.csv")
+)
+
+WP_protein_norm_Jurkat <- normalize_intensity(WP_protein_filtered_Jurkat)
+
+write_csv(
+  WP_protein_norm_Jurkat,
+  paste0(source_file_path, "normalization/WP_protein_norm_Jurkat.csv")
+)
+
+
+# ==============================================================================
+# Verification: Check Column Sums
+# ==============================================================================
 # Uncomment to verify normalization worked correctly
 
 # cat("\n=== HEK293T Protein Level Normalization Check ===\n")

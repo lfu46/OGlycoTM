@@ -110,7 +110,140 @@ ggsave(
 cat("\nFigure 3A saved to:", figure_file_path, "Figure3/\n")
 
 # Figure 3B ---------------------------------------------------------------
-# (Add later)
+# Split violin plot comparing O-GlcNAc protein vs whole proteome abundance changes
+# Statistical test: Kolmogorov-Smirnov test
+
+library(introdataviz)
+
+# Extract information for HEK293T
+OGlcNAc_WP_distribution_HEK293T <- OGlcNAc_protein_DE_HEK293T |>
+  select(Protein.ID, logFC_OGlcNAc = logFC) |>
+  left_join(WP_protein_DE_HEK293T, by = join_by(Protein.ID == UniProt_Accession)) |>
+  select(Protein.ID, logFC_OGlcNAc, logFC_WP = logFC) |>
+  filter(!is.na(logFC_WP)) |>
+  pivot_longer(cols = logFC_OGlcNAc:logFC_WP, names_to = "Exp", values_to = "logFC") |>
+  mutate(Cell = "HEK293T")
+
+# Extract information for HepG2
+OGlcNAc_WP_distribution_HepG2 <- OGlcNAc_protein_DE_HepG2 |>
+  select(Protein.ID, logFC_OGlcNAc = logFC) |>
+  left_join(WP_protein_DE_HepG2, by = join_by(Protein.ID == UniProt_Accession)) |>
+  select(Protein.ID, logFC_OGlcNAc, logFC_WP = logFC) |>
+  filter(!is.na(logFC_WP)) |>
+  pivot_longer(cols = logFC_OGlcNAc:logFC_WP, names_to = "Exp", values_to = "logFC") |>
+  mutate(Cell = "HepG2")
+
+# Extract information for Jurkat
+OGlcNAc_WP_distribution_Jurkat <- OGlcNAc_protein_DE_Jurkat |>
+  select(Protein.ID, logFC_OGlcNAc = logFC) |>
+  left_join(WP_protein_DE_Jurkat, by = join_by(Protein.ID == UniProt_Accession)) |>
+  select(Protein.ID, logFC_OGlcNAc, logFC_WP = logFC) |>
+  filter(!is.na(logFC_WP)) |>
+  pivot_longer(cols = logFC_OGlcNAc:logFC_WP, names_to = "Exp", values_to = "logFC") |>
+  mutate(Cell = "Jurkat")
+
+# Combine results for all cell types
+OGlcNAc_WP_distribution_combined <- bind_rows(
+  OGlcNAc_WP_distribution_HEK293T,
+  OGlcNAc_WP_distribution_HepG2,
+  OGlcNAc_WP_distribution_Jurkat
+)
+
+# Print sample sizes
+cat("\nFigure 3B - Sample sizes (matched proteins):\n")
+cat("HEK293T:", nrow(OGlcNAc_WP_distribution_HEK293T) / 2, "\n")
+cat("HepG2:", nrow(OGlcNAc_WP_distribution_HepG2) / 2, "\n")
+cat("Jurkat:", nrow(OGlcNAc_WP_distribution_Jurkat) / 2, "\n")
+
+# KS tests
+ks_HEK293T <- ks.test(
+  OGlcNAc_WP_distribution_HEK293T |> filter(Exp == "logFC_OGlcNAc") |> pull(logFC),
+  OGlcNAc_WP_distribution_HEK293T |> filter(Exp == "logFC_WP") |> pull(logFC)
+)
+
+ks_HepG2 <- ks.test(
+  OGlcNAc_WP_distribution_HepG2 |> filter(Exp == "logFC_OGlcNAc") |> pull(logFC),
+  OGlcNAc_WP_distribution_HepG2 |> filter(Exp == "logFC_WP") |> pull(logFC)
+)
+
+ks_Jurkat <- ks.test(
+  OGlcNAc_WP_distribution_Jurkat |> filter(Exp == "logFC_OGlcNAc") |> pull(logFC),
+  OGlcNAc_WP_distribution_Jurkat |> filter(Exp == "logFC_WP") |> pull(logFC)
+)
+
+cat("\nFigure 3B - KS Test Results (O-GlcNAc vs WP):\n")
+cat("HEK293T: p =", format(ks_HEK293T$p.value, digits = 4), "\n")
+cat("HepG2: p =", format(ks_HepG2$p.value, digits = 4), "\n")
+cat("Jurkat: p =", format(ks_Jurkat$p.value, digits = 4), "\n")
+
+# Function to convert p-value to significance label
+get_signif_label <- function(p) {
+  if (p < 0.0001) return("****")
+  if (p < 0.001) return("***")
+  if (p < 0.01) return("**")
+  if (p < 0.05) return("*")
+  return("ns")
+}
+
+# Create KS test label dataframe for annotation
+ks_test_label <- tibble(
+  Cell = c("HEK293T", "HepG2", "Jurkat"),
+  p_signif = c(
+    get_signif_label(ks_HEK293T$p.value),
+    get_signif_label(ks_HepG2$p.value),
+    get_signif_label(ks_Jurkat$p.value)
+  ),
+  logFC = 1.5
+) |>
+  mutate(Cell = factor(Cell, levels = c("HEK293T", "HepG2", "Jurkat")))
+
+# Prepare data for split violin plot (without faceting)
+Figure3B_data <- OGlcNAc_WP_distribution_combined |>
+  mutate(
+    Cell = factor(Cell, levels = c("HEK293T", "HepG2", "Jurkat")),
+    # Create unique fill variable combining cell type and experiment
+    fill_group = case_when(
+      Exp == "logFC_OGlcNAc" & Cell == "HEK293T" ~ "OGlcNAc_HEK293T",
+      Exp == "logFC_OGlcNAc" & Cell == "HepG2" ~ "OGlcNAc_HepG2",
+      Exp == "logFC_OGlcNAc" & Cell == "Jurkat" ~ "OGlcNAc_Jurkat",
+      Exp == "logFC_WP" ~ "WP"
+    ),
+    fill_group = factor(fill_group, levels = c("OGlcNAc_HEK293T", "OGlcNAc_HepG2", "OGlcNAc_Jurkat", "WP"))
+  )
+
+# Split violin plot (combined, no faceting)
+Figure3B <- Figure3B_data |>
+  ggplot(aes(x = Cell, y = logFC, fill = fill_group)) +
+  geom_split_violin(color = "transparent") +
+  geom_text(data = ks_test_label, aes(x = Cell, y = logFC, label = p_signif),
+            inherit.aes = FALSE, size = 3) +
+  scale_fill_manual(values = c(
+    "OGlcNAc_HEK293T" = unname(colors_cell["HEK293T"]),
+    "OGlcNAc_HepG2" = unname(colors_cell["HepG2"]),
+    "OGlcNAc_Jurkat" = unname(colors_cell["Jurkat"]),
+    "WP" = "gray70"
+  )) +
+  coord_cartesian(ylim = c(-2, 2)) +
+  labs(x = "", y = expression(log[2]*"(Tuni/Ctrl)"), fill = "") +
+  theme_bw() +
+  theme(
+    panel.grid.major = element_line(linewidth = 0.2, color = "gray"),
+    panel.grid.minor = element_line(linewidth = 0.1, color = "gray"),
+    axis.title = element_text(size = 7),
+    axis.text.x = element_text(size = 7, color = "black", angle = 30, hjust = 1),
+    axis.text.y = element_text(size = 7, color = "black"),
+    legend.position = "none"
+  )
+
+print(Figure3B)
+
+ggsave(
+  filename = paste0(figure_file_path, "Figure3/Figure3B.pdf"),
+  plot = Figure3B,
+  width = 1.5, height = 1.5, units = "in"
+)
+
+cat("\nFigure 3B saved to:", figure_file_path, "Figure3/\n")
 
 # Figure 3C ---------------------------------------------------------------
 # Violin boxplot comparing logFC of O-GlcNAc proteins in specific functional categories

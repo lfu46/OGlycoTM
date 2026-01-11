@@ -26,25 +26,23 @@ Figure 2A. Identification results for both O-GlcNAc and O-GalNAc in each cell ty
 Figure 2B. Venn's diagram of localized O-GlcNAc sites across three cell types
 Figure 2C. Percentage of the common and unique O-GlcNAc proteins with their functional enrichment analysis
 
-# Figure 3: Quantification Results - Common Glycoproteins (1/8/2026 & 1/9/2026)
+# Figure 3: Quantification Results - Common Glycoproteins (1/8/2026 & 1/9/2026 & 1/10/2026)
 
-Figure 3A. UMAP for O-GlcNAc and O-GalNAc proteins in HEK239T, HepG2 and
-Jurkat cells Figure 3B. Quantification results for O-GlcNAc and O-GalNAc
-proteins (statistical analysis) Figure 3C. Comparison of abundance
-changes: O-GlcNAc vs. Whole Proteome Figure 3D. Functional enrichment
-analysis for general-up and -down O-GlcNAc proteins (with examples)
-Figure 3E. Functional enrichment analysis for general-up and -down
-O-GalNAc proteins (with examples)
+Figure 3A. Quantification results for O-GlcNAc proteins across three cell types
+Figure 3B. Comparison of abundance changes: O-GlcNAc vs. Whole Proteome 
+Figure 3C. Comparison of the abundance changes of O-GlcNAc proteins in selected common terms
+Figure 3D. UMAP of commonly up- and down-regulated O-GlcNAc proteins in three cell types
+Figure 3E. Functional enrichment analysis for general-up and -down O-GlcNAc proteins
 
-# Figure 4: Quantification Results - Unique Glycoproteins (1/10/2026)
+# Figure 4: Quantification Results - Unique Glycoproteins (1/11/2026)
 
 <!-- Cell line-specific glycoprotein analysis -->
 
-# Figure 5:  (1/10/2026)
+# Figure 5:  (1/11/2026)
 
 <!-- Site localization and confidence level analysis -->
 
-# Figure 6: Site-Specific Analysis (1/10/2026 & 1/11/2026)
+# Figure 6: Site-Specific Analysis (1/11/2026)
 
 <!-- Tyrosine O-GlcNAc glycosylation analysis and literature comparison -->
 
