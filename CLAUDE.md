@@ -8,23 +8,44 @@ OGlycoTM is an R-based data analysis project for analyzing O-glycosylation (O-Gl
 
 ## Data Pipeline Architecture
 
-The analysis follows a sequential pipeline:
+The analysis follows a sequential pipeline with two parallel tracks:
 
+### O-Glycoproteomics Pipeline
 1. **data_import.R** - Imports raw TSV files from OGlycoTM mass spectrometry search results, filters for human proteins, removes decoys/contaminants
 2. **data_filtering.R** - Filters for high-confidence localized sites (Level1, Level1b), removes cysteine artifacts, creates "bonafide" datasets
-3. **data_source.R** - Central configuration with file paths, color palettes, and imports all filtered datasets
-4. **Figure2.R** (and subsequent figure scripts) - Generates publication figures
+3. **data_quantification.R** - Aggregates PSM intensities to protein and site levels for O-GlcNAc
+4. **data_normalization.R** - Applies SL (sample loading) + TMM normalization using edgeR
+5. **differential_analysis.R** - Performs limma-based differential expression (Tuni vs Ctrl)
+
+### Whole Proteome Pipeline
+1. **data_import.R** - Imports WP raw CSV files, renames TMT channels (Sn.126-131)
+2. **data_filtering.R** - Quality filters: XCorr > 1.2, PPM -10 to 10, all Sn > 5, removes decoys/contaminants
+3. **data_quantification.R** - Aggregates to protein level by UniProt_Accession
+4. **data_normalization.R** - Same SL + TMM normalization
+5. **differential_analysis.R** - Same limma analysis
+
+### Data Source Files
+- **data_source.R** - Central configuration with file paths, color palettes, loads all filtered/quantified datasets
+- **data_source_DE.R** - Loads differential analysis results (sources data_source.R first)
 
 ## Running Scripts
 
 ```r
-# Execute in order:
-source('data_analysis/data_source.R')      # Load data and config (sources filtered data)
-source('data_analysis/Figure2.R')          # Generate Figure 2 panels
+# Set working directory to data_analysis folder
+setwd("data_analysis")
 
-# For full pipeline from raw data:
-source('data_analysis/data_import.R')      # Import raw data
-source('data_analysis/data_filtering.R')   # Filter & curate
+# For analysis using pre-processed data:
+source('data_source.R')           # Load base data and config
+source('data_source_DE.R')        # Load differential analysis results
+source('Figure2.R')               # Generate Figure 2 panels
+source('Figure3.R')               # Generate Figure 3 panels
+
+# For full pipeline from raw data (run in order):
+source('data_import.R')           # Import raw data
+source('data_filtering.R')        # Filter & curate
+source('data_quantification.R')   # Aggregate to protein/site level
+source('data_normalization.R')    # Normalize intensities
+source('differential_analysis.R') # Differential expression analysis
 ```
 
 ## Key Configuration (data_source.R)
@@ -32,18 +53,37 @@ source('data_analysis/data_filtering.R')   # Filter & curate
 - **source_file_path**: `/Volumes/cos-lab-rwu60/Longping/OGlycoTM_Final_Version/data_source/`
 - **figure_file_path**: `/Volumes/cos-lab-rwu60/Longping/OGlycoTM_Final_Version/Figures/`
 - **Color palettes**:
-  - Glycan types: O-GlcNAc (#F39B7F salmon), O-GalNAc (#4DBBD5 blue)
-  - Cell types: HEK293T (#4DBBD5), HepG2 (#F39B7F), Jurkat (#00A087)
+  - `colors_glycan`: O-GlcNAc (#F39B7F salmon), O-GalNAc (#4DBBD5 blue)
+  - `colors_cell`: HEK293T (#4DBBD5), HepG2 (#F39B7F), Jurkat (#00A087)
+
+## Experimental Design
+
+- **Conditions**: Tuni (tunicamycin treatment) vs Ctrl (control)
+- **Replicates**: 3 per condition (channels 126-128 = Tuni, 129-131 = Ctrl)
+- **TMT channels**: Intensity.Tuni_1, Tuni_2, Tuni_3, Ctrl_4, Ctrl_5, Ctrl_6
+- **Normalized columns**: `_sl` suffix for SL-normalized, `_sl_tmm` suffix for SL+TMM normalized
 
 ## Key R Packages
 
 - `tidyverse` - Data manipulation and ggplot2 visualization
+- `edgeR` - TMM normalization (calcNormFactors)
+- `limma` - Differential expression analysis
+- `clusterProfiler` - GO enrichment analysis
 - `eulerr` - Proportional Venn/Euler diagrams
-- `readr` - TSV/CSV I/O
+- `introdataviz` - Split violin plots (install from GitHub: `remotes::install_github("psyteachr/introdataviz")`)
+- `ggpubr`, `rstatix` - Statistical annotations on plots
 
 ## Data Files
 
 All data files (CSV, TSV, XLSX) are in .gitignore. Data is stored on external network drive at `/Volumes/cos-lab-rwu60/Longping/OGlycoTM_Final_Version/`.
+
+**Key data subfolders:**
+- `raw/` - Raw imported data
+- `filtered/` - Quality-filtered datasets
+- `quantification/` - Protein/site level quantified data
+- `normalization/` - Normalized intensity data
+- `differential_analysis/` - DE results and commonly regulated protein lists
+- `enrichment/` - GO enrichment results
 
 ## Analysis Logic Document
 
