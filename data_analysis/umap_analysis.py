@@ -101,6 +101,46 @@ def run_umap_with_metadata(intensity_df, sample_names, cell_types, conditions,
     return result_df
 
 
+def run_umap_proteins(logfc_matrix, protein_ids, n_neighbors=15, min_dist=0.1,
+                       random_state=42):
+    """
+    Run UMAP on protein logFC matrix for protein-centric visualization.
+
+    Parameters:
+    -----------
+    logfc_matrix : pandas DataFrame or numpy array
+        Proteins as rows, cell types (logFC values) as columns
+    protein_ids : list
+        Protein identifiers
+    n_neighbors : int
+        UMAP parameter (default 15, good for larger datasets)
+    min_dist : float
+        UMAP parameter (default 0.1)
+    random_state : int
+        Random seed
+
+    Returns:
+    --------
+    pandas DataFrame with UMAP1, UMAP2, Protein.ID columns
+    """
+    # Run UMAP
+    umap_coords = run_umap(
+        logfc_matrix,
+        n_neighbors=n_neighbors,
+        min_dist=min_dist,
+        random_state=random_state
+    )
+
+    # Create result DataFrame
+    result_df = pd.DataFrame({
+        'UMAP1': umap_coords[:, 0],
+        'UMAP2': umap_coords[:, 1],
+        'Protein.ID': protein_ids
+    })
+
+    return result_df
+
+
 if __name__ == "__main__":
     # Test with dummy data
     np.random.seed(42)
