@@ -85,6 +85,21 @@ All data files (CSV, TSV, XLSX) are in .gitignore. Data is stored on external ne
 - `differential_analysis/` - DE results and commonly regulated protein lists
 - `enrichment/` - GO enrichment results
 
+## Figure Scripts
+
+Each figure script can run independently by sourcing `data_source.R` or `data_source_DE.R` first:
+- **Figure2.R** - O-GlcNAc identification overview (Euler diagrams, site distribution)
+- **Figure3.R** - Differential expression analysis (volcano plots, heatmaps)
+- **Figure4.R** - Cell-type specific analysis (circular heatmaps, GO enrichment)
+- **Figure5.R** - Subcellular localization analysis (proportion barplots, location-specific dotplots)
+
+## Common Data Variables
+
+After sourcing `data_source_DE.R`, these key variables are available:
+- `OGlcNAc_protein_DE_HEK293T/HepG2/Jurkat` - Differential expression results with logFC, adj.P.Val
+- `OGlcNAc_protein_norm_HEK293T/HepG2/Jurkat` - Normalized TMT intensities
+- `colors_cell`, `colors_glycan` - Consistent color palettes for plotting
+
 ## Analysis Logic Document
 
 `OGlycoTM_Data_Analysis_Logic.RMD` contains the master analysis workflow organized by figure (Figure 1-6) with scheduled milestones.
