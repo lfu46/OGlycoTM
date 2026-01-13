@@ -3,55 +3,244 @@ title: "OGlycoTM Data Analysis"
 author: "Longping Fu"
 date: "`r Sys.Date()`"
 output:
-  html_document:
+  pdf_document:
     toc: true
-    toc_float: true
     toc_depth: 3
-editor_options: 
-  markdown: 
+    number_sections: true
+    fig_caption: true
+    latex_engine: xelatex
+header-includes:
+  - \usepackage{float}
+  - \floatplacement{figure}{H}
+  - \usepackage{booktabs}
+  - \usepackage{longtable}
+fontsize: 11pt
+geometry: margin=1in
+editor_options:
+  markdown:
     wrap: 72
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+knitr::opts_chunk$set(
+  echo = FALSE,
+  warning = FALSE,
+  message = FALSE,
+  fig.align = "center",
+  out.width = "85%",
+  fig.pos = "H"
+)
+
+# Define figure path
+figure_path <- "/Volumes/cos-lab-rwu60/Longping/OGlycoTM_Final_Version/Figures/"
 ```
 
-# Figure 1: Workflow (1/10/2026)
+\newpage
 
-<!-- Description of the OGlycoTM analysis workflow -->
+# Introduction
 
-# Figure 2: Identification Results (1/7/2026 & 1/8/2026 & 1/9/2026)
+This document presents the data analysis workflow and results for the OGlycoTM project, which investigates O-glycosylation (O-GlcNAc and O-GalNAc modifications) in mass spectrometry proteomics data across three human cell types: **HEK293T**, **HepG2**, and **Jurkat**.
 
-Figure 2A. Identification results for both O-GlcNAc and O-GalNAc in each cell type 
-Figure 2B. Venn's diagram of localized O-GlcNAc sites across three cell types
-Figure 2C. Percentage of the common and unique O-GlcNAc proteins with their functional enrichment analysis
+The analysis compares tunicamycin-treated (Tuni) versus control (Ctrl) conditions to understand the dynamics of O-GlcNAcylation across different cellular contexts.
 
-# Figure 3: Quantification Results - Common Glycoproteins (1/8/2026 & 1/9/2026 & 1/10/2026)
+---
 
-Figure 3A. Quantification results for O-GlcNAc proteins across three cell types
-Figure 3B. Comparison of abundance changes: O-GlcNAc vs. Whole Proteome 
-Figure 3C. Comparison of the abundance changes of O-GlcNAc proteins in selected common terms
-Figure 3D. UMAP of commonly up- and down-regulated O-GlcNAc proteins in three cell types
-Figure 3E. Functional enrichment analysis for general-up and -down O-GlcNAc proteins
+# Figure 1: Workflow
 
-# Figure 4: Quantification Results - Unique Glycoproteins (1/11/2026)
+This figure illustrates the overall experimental and computational workflow for the OGlycoTM project.
 
-<!-- Cell line-specific glycoprotein analysis -->
+```{r fig1-workflow, fig.cap="Schematic workflow of the OGlycoTM project showing the experimental design, mass spectrometry analysis pipeline, and computational analysis steps for O-GlcNAc and O-GalNAc identification across HEK293T, HepG2, and Jurkat cell lines."}
+knitr::include_graphics(paste0(figure_path, "Figure1/Figure1.pdf"))
+```
 
-# Figure 5:  (1/11/2026)
+---
 
-<!-- Site localization and confidence level analysis -->
+\newpage
 
-# Figure 6: Site-Specific Analysis (1/11/2026)
+# Figure 2: Identification Results
 
-<!-- Tyrosine O-GlcNAc glycosylation analysis and literature comparison -->
+This figure presents the identification results for O-glycosylation sites across the three cell types.
 
-Summarize all the figures in slides and discuss with Ronghu (1/11/2026 &
-1/12/2026) Revise the figures and manuscript (1/13/2026 - 1/16/2026)
-Complete the revision (1/20/2026)
+## Figure 2A: Identification Overview
+
+```{r fig2a, fig.cap="Identification results for both O-GlcNAc and O-GalNAc modifications in each cell type (HEK293T, HepG2, Jurkat). Barplots showing the number of identified glycoproteins and glycosites for each modification type."}
+knitr::include_graphics(paste0(figure_path, "Figure2/Figure2A.pdf"))
+```
+
+## Figure 2B: Site Overlap Analysis
+
+```{r fig2b, fig.cap="Euler diagram showing the overlap of localized O-GlcNAc sites across three cell types. The proportional areas represent the number of shared and unique sites among HEK293T, HepG2, and Jurkat cells."}
+knitr::include_graphics(paste0(figure_path, "Figure2/Figure2B.pdf"))
+```
+
+## Figure 2C: Functional Enrichment of Common vs. Unique Proteins
+
+```{r fig2c, fig.cap="Percentage distribution of common and unique O-GlcNAc proteins with their corresponding Gene Ontology functional enrichment analysis, highlighting the distinct biological processes associated with shared versus cell-type-specific glycoproteins."}
+knitr::include_graphics(paste0(figure_path, "Figure2/Figure2C.pdf"))
+```
+
+---
+
+\newpage
+
+# Figure 3: Quantification Results - Common Glycoproteins
+
+This figure presents the quantitative analysis of O-GlcNAc proteins that are commonly identified across cell types.
+
+## Figure 3A: Quantification Overview
+
+```{r fig3a, fig.cap="Quantification results for O-GlcNAc proteins across three cell types showing TMT intensity distributions and reproducibility between biological replicates."}
+knitr::include_graphics(paste0(figure_path, "Figure3/Figure3A.pdf"))
+```
+
+## Figure 3B: O-GlcNAc vs. Whole Proteome Comparison
+
+```{r fig3b, fig.cap="Comparison of abundance changes between O-GlcNAc glycoproteome and whole proteome upon tunicamycin treatment. Split violin plots showing the differential distribution of log2 fold changes, demonstrating the specific regulation of O-GlcNAcylation independent of protein expression changes."}
+knitr::include_graphics(paste0(figure_path, "Figure3/Figure3B.pdf"))
+```
+
+## Figure 3C: Functional Category Comparison
+
+```{r fig3c, fig.cap="Comparison of the abundance changes of O-GlcNAc proteins in selected common functional terms. Boxplots grouped by Gene Ontology categories showing differential regulation patterns across biological processes."}
+knitr::include_graphics(paste0(figure_path, "Figure3/Figure3C.pdf"))
+```
+
+## Figure 3D: UMAP Clustering Analysis
+
+```{r fig3d, fig.cap="UMAP dimensionality reduction of commonly up- and down-regulated O-GlcNAc proteins in three cell types, revealing the clustering patterns and cell-type-specific regulatory signatures."}
+knitr::include_graphics(paste0(figure_path, "Figure3/Figure3D.pdf"))
+```
+
+## Figure 3E: GO Enrichment of Commonly Regulated Proteins
+
+```{r fig3e, fig.cap="Gene Ontology enrichment analysis for generally up-regulated and down-regulated O-GlcNAc proteins across all three cell types, identifying conserved biological pathways affected by tunicamycin treatment."}
+knitr::include_graphics(paste0(figure_path, "Figure3/Figure3E.pdf"))
+```
+
+---
+
+\newpage
+
+# Figure 4: Quantification Results - Cell-Type-Specific Glycoproteins
+
+This figure explores the cell-type-specific O-GlcNAc protein regulation patterns.
+
+## Figure 4A: Circular Heatmap Overview
+
+```{r fig4a, fig.cap="Circular heatmap visualization showing all O-GlcNAc proteins across three cell types (HEK293T, HepG2, Jurkat). Multiple concentric tracks display: regulation category (up/median/down), Z-score normalized TMT abundance across 6 channels, cell type annotation, and adjusted p-value. Intralinks connect proteins that show opposite regulation patterns between cell types (significantly down in one but significantly up in another)."}
+knitr::include_graphics(paste0(figure_path, "Figure4/Figure4A.pdf"))
+```
+
+## Figure 4B: Oppositely Regulated Proteins
+
+```{r fig4b, fig.cap="Dot plot highlighting selected proteins with opposite regulation patterns between cell types. These proteins show significant upregulation in one cell type while being significantly downregulated in another, suggesting cell-type-specific O-GlcNAc regulatory mechanisms."}
+knitr::include_graphics(paste0(figure_path, "Figure4/Figure4B.pdf"))
+```
+
+## Figure 4C: GO Enrichment - HEK293T
+
+```{r fig4c, fig.cap="Gene Ontology enrichment analysis for HEK293T-specific O-GlcNAc protein regulation, showing the biological processes, molecular functions, and cellular components uniquely affected in this embryonic kidney cell line."}
+knitr::include_graphics(paste0(figure_path, "Figure4/Figure4C.pdf"))
+```
+
+## Figure 4D: GO Enrichment - HepG2
+
+```{r fig4d, fig.cap="Gene Ontology enrichment analysis for HepG2-specific O-GlcNAc protein regulation, highlighting liver-specific metabolic and secretory pathways affected by tunicamycin treatment."}
+knitr::include_graphics(paste0(figure_path, "Figure4/Figure4D.pdf"))
+```
+
+## Figure 4E: GO Enrichment - Jurkat
+
+```{r fig4e, fig.cap="Gene Ontology enrichment analysis for Jurkat-specific O-GlcNAc protein regulation, revealing T-cell-specific immune and signaling pathways uniquely regulated in this leukemic cell line."}
+knitr::include_graphics(paste0(figure_path, "Figure4/Figure4E.pdf"))
+```
+
+---
+
+\newpage
+
+# Figure 5: Subcellular Localization Analysis
+
+This figure analyzes the subcellular distribution of O-GlcNAc proteins and location-specific regulation patterns.
+
+## Figure 5A: Subcellular Location Distribution
+
+```{r fig5a, fig.cap="Stacked barplot showing the proportion of O-GlcNAc proteins in each subcellular location across the three cell types. Annotations derived from Human Protein Atlas with high-confidence single-location assignments."}
+knitr::include_graphics(paste0(figure_path, "Figure5/Figure5A.pdf"))
+```
+
+## Figure 5B: Location-Specific Regulation Patterns
+
+```{r fig5b, fig.cap="Dot plot showing log2 fold changes of O-GlcNAc proteins grouped by subcellular location. Statistical comparisons reveal location-specific regulation patterns, with certain compartments showing preferential up- or down-regulation upon tunicamycin treatment."}
+knitr::include_graphics(paste0(figure_path, "Figure5/Figure5B.pdf"))
+```
+
+## Figure 5C: Plasma Membrane O-GlcNAc Proteins (HEK293T)
+
+```{r fig5c, fig.cap="Detailed analysis of plasma membrane-localized O-GlcNAc proteins in HEK293T cells, showing selected proteins with their expression profiles across treatment conditions."}
+knitr::include_graphics(paste0(figure_path, "Figure5/Figure5C.pdf"))
+```
+
+## Figure 5D: Endoplasmic Reticulum O-GlcNAc Proteins (HepG2)
+
+```{r fig5d, fig.cap="Detailed analysis of endoplasmic reticulum-localized O-GlcNAc proteins in HepG2 cells. The ER stress response induced by tunicamycin treatment leads to specific regulation of ER-resident glycoproteins."}
+knitr::include_graphics(paste0(figure_path, "Figure5/Figure5D.pdf"))
+```
+
+## Figure 5E: Mitochondrial O-GlcNAc Proteins (HepG2)
+
+```{r fig5e, fig.cap="Detailed analysis of mitochondria-localized O-GlcNAc proteins in HepG2 cells, revealing the impact of tunicamycin treatment on mitochondrial O-GlcNAcylation and potential metabolic implications."}
+knitr::include_graphics(paste0(figure_path, "Figure5/Figure5E.pdf"))
+```
+
+---
+
+\newpage
+
+# Figure 6: Site-Specific Structural Regression Analysis
+
+This figure investigates the structural and sequence features associated with O-GlcNAc site regulation.
+
+## Figure 6A: Site-Level logFC Distribution
+
+```{r fig6a, fig.cap="Distribution of log2 fold changes at the O-GlcNAc site level across three cell types. Violin plots with embedded boxplots showing the spread and central tendency of site-specific regulation upon tunicamycin treatment."}
+knitr::include_graphics(paste0(figure_path, "Figure6/Figure6A.pdf"))
+```
+
+## Figure 6B: Secondary Structure Distribution
+
+```{r fig6b, fig.cap="Donut plot showing the distribution of O-GlcNAc sites across different secondary structure elements (helix, sheet, coil, intrinsically disordered regions). The structural context of glycosylation sites influences their regulatory behavior."}
+knitr::include_graphics(paste0(figure_path, "Figure6/Figure6B.pdf"))
+```
+
+## Figure 6C: Regression Coefficient Analysis
+
+```{r fig6c, fig.cap="Standardized regression coefficients from multiple linear regression models predicting site-level log2 fold changes. Features include intrinsic disorder propensity (IDR), solvent accessibility (pPSE), secondary structure, and sequence properties (pI, hydrophobicity)."}
+knitr::include_graphics(paste0(figure_path, "Figure6/Figure6C.pdf"))
+```
+
+## Figure 6D: IDR Effect Across Cell Types
+
+```{r fig6d, fig.cap="Analysis of intrinsically disordered region (IDR) effects on O-GlcNAc site regulation across cell types. Sites within disordered regions show distinct regulatory patterns compared to those in structured domains."}
+knitr::include_graphics(paste0(figure_path, "Figure6/Figure6D.pdf"))
+```
+
+## Figure 6E: Solvent Exposure Effect
+
+```{r fig6e, fig.cap="Analysis of pseudo solvent exposure (pPSE) effects on O-GlcNAc site regulation. Surface-exposed sites may show different regulatory responses to tunicamycin treatment compared to buried sites."}
+knitr::include_graphics(paste0(figure_path, "Figure6/Figure6E.pdf"))
+```
+
+## Figure 6F: HCFC1 Case Study
+
+```{r fig6f, fig.cap="Site-specific O-GlcNAc analysis of HCFC1 (Host Cell Factor C1) as a case study. Top panel: log2 fold changes at individual O-GlcNAc sites across cell types. Bottom panel: AlphaFold2 predicted local distance difference test (pLDDT) profile showing structural confidence along the protein sequence, correlating site regulation with structural features."}
+knitr::include_graphics(paste0(figure_path, "Figure6/Figure6F.pdf"))
+```
+
+---
 
 # Session Information
 
-```{r session-info}
+```{r session-info, echo=TRUE}
 sessionInfo()
 ```
