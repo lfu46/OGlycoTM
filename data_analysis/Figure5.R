@@ -93,13 +93,20 @@ subcellular_location_filtered |>
 # Stacked barplot showing proportion of O-GlcNAc proteins in each location
 # Locations with <10 proteins or no annotation go to "Other"
 
-# Load necessary files (if running this section independently)
-if (!exists("subcellular_location_filtered")) {
-  subcellular_location_filtered <- read_csv(
-    paste0(source_file_path, 'subcellular_location/subcellular_location_filtered.csv')
-  )
-  cat("Loaded: subcellular_location_filtered.csv\n")
-}
+# Load required libraries
+library(tidyverse)
+
+# Source data paths, colors, and differential analysis results
+source('data_source_DE.R')
+
+# Create output directory
+dir.create(paste0(source_file_path, 'subcellular_location'), showWarnings = FALSE)
+
+# Load subcellular location data
+subcellular_location_filtered <- read_csv(
+  paste0(source_file_path, 'subcellular_location/subcellular_location_filtered.csv')
+)
+cat("Loaded: subcellular_location_filtered.csv\n")
 
 # Function to prepare data for proportion barplot
 prepare_proportion_data <- function(de_data, location_data, cell_name, min_n = 10) {
@@ -200,12 +207,13 @@ figure5A <- prop_combined |>
   labs(x = "", y = "Proportion of O-GlcNAc proteins", fill = "Location") +
   theme_classic() +
   theme(
-    axis.title.y = element_text(size = 7),
-    axis.text.x = element_text(color = "black", size = 7, angle = 30, hjust = 1),
-    axis.text.y = element_text(color = "black", size = 7),
+    axis.title.y = element_text(size = 8),
+    axis.text.x = element_text(color = "black", size = 8, angle = 30, hjust = 1),
+    axis.text.y = element_text(color = "black", size = 8),
     legend.title = element_text(size = 6),
     legend.text = element_text(size = 5),
-    legend.key.size = unit(0.25, "cm")
+    legend.key.size = unit(0.2, "cm"),
+    legend.spacing.y = unit(0.05, "cm")
   )
 
 # Create output directory
@@ -224,14 +232,22 @@ cat("\nFigure 5A proportion barplot saved to:", figure_file_path, "Figure5/Figur
 # =============================================================================
 # Compare logFC distributions across subcellular locations and cell types
 
-# Load necessary files (if running this section independently)
-if (!exists("subcellular_location_filtered")) {
-  subcellular_location_filtered <- read_csv(
-    paste0(source_file_path, 'subcellular_location/subcellular_location_filtered.csv')
-  )
-  cat("Loaded: subcellular_location_filtered.csv\n")
-}
-# Note: DE data (OGlcNAc_protein_DE_HEK293T, etc.) is loaded via source('data_source_DE.R')
+# Load required libraries
+library(tidyverse)
+library(ggpubr)
+
+# Source data paths, colors, and differential analysis results
+source('data_source_DE.R')
+
+# Create output directories
+dir.create(paste0(source_file_path, 'subcellular_location'), showWarnings = FALSE)
+dir.create(paste0(figure_file_path, "Figure5"), showWarnings = FALSE)
+
+# Load subcellular location data
+subcellular_location_filtered <- read_csv(
+  paste0(source_file_path, 'subcellular_location/subcellular_location_filtered.csv')
+)
+cat("Loaded: subcellular_location_filtered.csv\n")
 
 # Merge with DE data for each cell type
 merge_with_location <- function(de_data, cell_name) {
@@ -464,7 +480,41 @@ wilcox_across_cells_results |>
 # Figure 5B Dotplot - logFC by Subcellular Location
 # -----------------------------------------------------------------------------
 
+# Load required libraries
+library(tidyverse)
 library(ggpubr)
+
+# Source data paths, colors, and differential analysis results
+source('data_source_DE.R')
+
+# Create output directory
+dir.create(paste0(figure_file_path, "Figure5"), showWarnings = FALSE)
+
+# Load pre-computed data
+OGlcNAc_location_combined <- read_csv(
+  paste0(source_file_path, 'subcellular_location/OGlcNAc_protein_location_combined.csv')
+)
+wilcox_across_locations_results <- read_csv(
+  paste0(source_file_path, 'subcellular_location/Wilcoxon_across_locations_within_cell.csv')
+)
+cat("Loaded: OGlcNAc_protein_location_combined.csv and Wilcoxon results\n")
+
+# Define color palette for subcellular locations
+colors_location <- c(
+  "Nucleoplasm" = "#3C5488",
+  "Cytosol" = "#00A087",
+  "Nucleoli" = "#4DBBD5",
+  "Mitochondria" = "#E64B35",
+  "Vesicles" = "#F39B7F",
+  "Golgi apparatus" = "#8491B4",
+  "Endoplasmic reticulum" = "#7E6148",
+  "Nuclear membrane" = "#B09C85",
+  "Plasma membrane" = "#91D1C2",
+  "Nuclear bodies" = "#DC0000",
+  "Nuclear speckles" = "#7AA6DC",
+  "Centrosome" = "#868686",
+  "Other" = "#BEBEBE"
+)
 
 # Filter for HEK293T and HepG2 only (Jurkat has no significant differences)
 # Use locations with >= 10 proteins (already filtered in Wilcoxon test)
@@ -605,12 +655,12 @@ plot_HEK293T <- dotplot_HEK293T |>
   scale_y_continuous(expand = expansion(mult = c(0.05, 0.1))) +
   theme_bw() +
   theme(
-    plot.title = element_text(size = 7, hjust = 0.5, margin = margin(2, 0, 2, 0)),
+    plot.title = element_text(size = 9, hjust = 0.5, margin = margin(2, 0, 2, 0)),
     plot.title.position = "panel",
-    axis.title.y = element_text(size = 7),
+    axis.title.y = element_text(size = 9),
     axis.text.x = element_blank(),
     axis.ticks.x = element_blank(),
-    axis.text.y = element_text(color = "black", size = 7),
+    axis.text.y = element_text(color = "black", size = 9),
     legend.position = "none",
     panel.grid.minor = element_blank()
   )
@@ -636,12 +686,12 @@ plot_HepG2 <- dotplot_HepG2 |>
   scale_y_continuous(expand = expansion(mult = c(0.05, 0.1))) +
   theme_bw() +
   theme(
-    plot.title = element_text(size = 7, hjust = 0.5, margin = margin(2, 0, 2, 0)),
+    plot.title = element_text(size = 9, hjust = 0.5, margin = margin(2, 0, 2, 0)),
     plot.title.position = "panel",
-    axis.title.y = element_text(size = 7),
+    axis.title.y = element_text(size = 9),
     axis.text.x = element_blank(),
     axis.ticks.x = element_blank(),
-    axis.text.y = element_text(color = "black", size = 7),
+    axis.text.y = element_text(color = "black", size = 9),
     legend.position = "none",
     panel.grid.minor = element_blank()
   )
@@ -661,80 +711,28 @@ cat("\nFigure 5B complete.\n")
 cat("Results saved to:", source_file_path, "subcellular_location/\n")
 
 # =============================================================================
-# Figure 5C - Plasma Membrane O-GlcNAc Proteins in HEK293T
+# Figure 5C-5E - Location-Specific O-GlcNAc Protein Dot Plots
 # =============================================================================
+# Dot plots for selected proteins from specific subcellular locations:
+# - Figure 5C: Plasma Membrane proteins (HEK293T)
+# - Figure 5D: ER proteins (HepG2)
+# - Figure 5E: Mitochondria proteins (HepG2)
 
-# Load necessary files (if running this section independently)
-if (!exists("OGlcNAc_location_combined")) {
-  OGlcNAc_location_combined <- read_csv(
-    paste0(source_file_path, 'subcellular_location/OGlcNAc_protein_location_combined.csv')
-  )
-  cat("Loaded: OGlcNAc_protein_location_combined.csv\n")
-}
+# Load required libraries
+library(tidyverse)
 
-# Extract O-GlcNAc proteins in HEK293T with plasma membrane annotation
-OGlcNAc_PM_HEK293T <- OGlcNAc_location_combined |>
-  filter(cell == "HEK293T") |>
-  filter(Location == "Plasma membrane")
+# Source data paths, colors, and differential analysis results
+source('data_source_DE.R')
 
-cat("\n========== Figure 5C: Plasma Membrane O-GlcNAc Proteins in HEK293T ==========\n")
-cat("Number of proteins:", nrow(OGlcNAc_PM_HEK293T), "\n")
-cat("Median logFC:", median(OGlcNAc_PM_HEK293T$logFC, na.rm = TRUE), "\n")
-cat("Mean logFC:", mean(OGlcNAc_PM_HEK293T$logFC, na.rm = TRUE), "\n")
-cat("\nProtein list:\n")
-print(OGlcNAc_PM_HEK293T |> dplyr::select(Protein.ID, Gene, logFC, adj.P.Val) |> arrange(desc(logFC)))
+# Create output directories
+dir.create(paste0(source_file_path, 'subcellular_location'), showWarnings = FALSE)
+dir.create(paste0(figure_file_path, "Figure5"), showWarnings = FALSE)
 
-# Save to subcellular_location subfolder
-write_csv(
-  OGlcNAc_PM_HEK293T,
-  paste0(source_file_path, 'subcellular_location/OGlcNAc_PM_HEK293T.csv')
+# Load location combined data
+OGlcNAc_location_combined <- read_csv(
+  paste0(source_file_path, 'subcellular_location/OGlcNAc_protein_location_combined.csv')
 )
-cat("\nSaved: subcellular_location/OGlcNAc_PM_HEK293T.csv\n")
-
-# Extract O-GlcNAc proteins in HepG2 with Endoplasmic reticulum annotation
-OGlcNAc_ER_HepG2 <- OGlcNAc_location_combined |>
-  filter(cell == "HepG2") |>
-  filter(Location == "Endoplasmic reticulum")
-
-cat("\n========== Figure 5C: ER O-GlcNAc Proteins in HepG2 ==========\n")
-cat("Number of proteins:", nrow(OGlcNAc_ER_HepG2), "\n")
-cat("Median logFC:", median(OGlcNAc_ER_HepG2$logFC, na.rm = TRUE), "\n")
-cat("Mean logFC:", mean(OGlcNAc_ER_HepG2$logFC, na.rm = TRUE), "\n")
-cat("\nProtein list:\n")
-print(OGlcNAc_ER_HepG2 |> dplyr::select(Protein.ID, Gene, logFC, adj.P.Val) |> arrange(desc(logFC)))
-
-# Save to subcellular_location subfolder
-write_csv(
-  OGlcNAc_ER_HepG2,
-  paste0(source_file_path, 'subcellular_location/OGlcNAc_ER_HepG2.csv')
-)
-cat("\nSaved: subcellular_location/OGlcNAc_ER_HepG2.csv\n")
-
-# Extract O-GlcNAc proteins in HepG2 with Mitochondria annotation
-OGlcNAc_Mito_HepG2 <- OGlcNAc_location_combined |>
-  filter(cell == "HepG2") |>
-  filter(Location == "Mitochondria")
-
-cat("\n========== Figure 5C: Mitochondria O-GlcNAc Proteins in HepG2 ==========\n")
-cat("Number of proteins:", nrow(OGlcNAc_Mito_HepG2), "\n")
-cat("Median logFC:", median(OGlcNAc_Mito_HepG2$logFC, na.rm = TRUE), "\n")
-cat("Mean logFC:", mean(OGlcNAc_Mito_HepG2$logFC, na.rm = TRUE), "\n")
-cat("\nProtein list:\n")
-print(OGlcNAc_Mito_HepG2 |> dplyr::select(Protein.ID, Gene, logFC, adj.P.Val) |> arrange(desc(logFC)))
-
-# Save to subcellular_location subfolder
-write_csv(
-  OGlcNAc_Mito_HepG2,
-  paste0(source_file_path, 'subcellular_location/OGlcNAc_Mito_HepG2.csv')
-)
-cat("\nSaved: subcellular_location/OGlcNAc_Mito_HepG2.csv\n")
-
-# -----------------------------------------------------------------------------
-# Figure 5C - Dot Plot for Selected PM O-GlcNAc Proteins
-# -----------------------------------------------------------------------------
-
-# Selected PM proteins from HEK293T
-selected_proteins <- c("P11166", "O00161", "Q9Y5M8")
+cat("Loaded: OGlcNAc_protein_location_combined.csv\n")
 
 # Load normalized data for each cell type
 OGlcNAc_protein_norm_HEK293T <- read_csv(
@@ -743,12 +741,8 @@ OGlcNAc_protein_norm_HEK293T <- read_csv(
 OGlcNAc_protein_norm_HepG2 <- read_csv(
   paste0(source_file_path, 'normalization/OGlcNAc_protein_norm_HepG2.csv')
 )
-OGlcNAc_protein_norm_Jurkat <- read_csv(
-  paste0(source_file_path, 'normalization/OGlcNAc_protein_norm_Jurkat.csv')
-)
 
 # Function to extract and calculate log2FC for selected proteins
-# Use mean of Ctrl replicates as denominator for each Tuni replicate
 extract_log2FC_data <- function(norm_data, cell_name, protein_ids) {
   norm_data |>
     filter(Protein.ID %in% protein_ids) |>
@@ -756,9 +750,7 @@ extract_log2FC_data <- function(norm_data, cell_name, protein_ids) {
                   Intensity.Tuni_1_sl_tmm, Intensity.Tuni_2_sl_tmm, Intensity.Tuni_3_sl_tmm,
                   Intensity.Ctrl_4_sl_tmm, Intensity.Ctrl_5_sl_tmm, Intensity.Ctrl_6_sl_tmm) |>
     mutate(
-      # Calculate mean of Ctrl replicates
       mean_Ctrl = (Intensity.Ctrl_4_sl_tmm + Intensity.Ctrl_5_sl_tmm + Intensity.Ctrl_6_sl_tmm) / 3,
-      # Calculate log2FC for each Tuni replicate vs mean Ctrl
       log2FC_rep1 = log2(Intensity.Tuni_1_sl_tmm / mean_Ctrl),
       log2FC_rep2 = log2(Intensity.Tuni_2_sl_tmm / mean_Ctrl),
       log2FC_rep3 = log2(Intensity.Tuni_3_sl_tmm / mean_Ctrl),
@@ -773,24 +765,34 @@ extract_log2FC_data <- function(norm_data, cell_name, protein_ids) {
     mutate(replicate = str_replace(replicate, "log2FC_rep", ""))
 }
 
-# Extract data for HEK293T only (proteins not detected in HepG2/Jurkat O-GlcNAc data)
-log2FC_data <- extract_log2FC_data(OGlcNAc_protein_norm_HEK293T, "HEK293T", selected_proteins) |>
+# Extract and save location-specific protein lists
+OGlcNAc_PM_HEK293T <- OGlcNAc_location_combined |>
+  filter(cell == "HEK293T", Location == "Plasma membrane")
+write_csv(OGlcNAc_PM_HEK293T, paste0(source_file_path, 'subcellular_location/OGlcNAc_PM_HEK293T.csv'))
+
+OGlcNAc_ER_HepG2 <- OGlcNAc_location_combined |>
+  filter(cell == "HepG2", Location == "Endoplasmic reticulum")
+write_csv(OGlcNAc_ER_HepG2, paste0(source_file_path, 'subcellular_location/OGlcNAc_ER_HepG2.csv'))
+
+OGlcNAc_Mito_HepG2 <- OGlcNAc_location_combined |>
+  filter(cell == "HepG2", Location == "Mitochondria")
+write_csv(OGlcNAc_Mito_HepG2, paste0(source_file_path, 'subcellular_location/OGlcNAc_Mito_HepG2.csv'))
+
+cat("Saved location-specific protein lists\n")
+
+# Figure 5C - Plasma Membrane proteins (HEK293T)
+selected_proteins_PM <- c("P11166", "O00161", "Q9Y5M8")
+
+log2FC_data_PM <- extract_log2FC_data(OGlcNAc_protein_norm_HEK293T, "HEK293T", selected_proteins_PM) |>
   filter(!is.na(log2FC) & is.finite(log2FC))
 
-cat("\n========== Figure 5C: Selected PM O-GlcNAc Proteins ==========\n")
-cat("Proteins:", paste(selected_proteins, collapse = ", "), "\n")
-print(log2FC_data |> group_by(Gene, cell) |> summarise(n = n(), mean_log2FC = mean(log2FC), .groups = "drop"))
+cat("\n========== Figure 5C: PM O-GlcNAc Proteins (HEK293T) ==========\n")
+print(log2FC_data_PM |> group_by(Gene) |> summarise(n = n(), mean_log2FC = mean(log2FC), .groups = "drop"))
 
-# Get gene names for facet labels
-gene_labels <- log2FC_data |>
-  dplyr::select(Protein.ID, Gene) |>
-  distinct()
+gene_labels_PM <- log2FC_data_PM |> dplyr::select(Protein.ID, Gene) |> distinct()
+log2FC_data_PM <- log2FC_data_PM |> mutate(Gene = factor(Gene, levels = gene_labels_PM$Gene))
 
-log2FC_data <- log2FC_data |>
-  mutate(Gene = factor(Gene, levels = gene_labels$Gene))
-
-# Create dot plot (flipped axes, HEK293T only)
-figure5C <- log2FC_data |>
+figure5C <- log2FC_data_PM |>
   ggplot(aes(x = log2FC, y = Gene)) +
   geom_vline(xintercept = 0, color = "grey50", linetype = "solid", linewidth = 0.5) +
   geom_jitter(height = 0.15, size = 2, alpha = 0.8, color = colors_cell["HEK293T"]) +
@@ -799,9 +801,9 @@ figure5C <- log2FC_data |>
   labs(x = expression(log[2](Tuni/Ctrl)), y = "") +
   theme_bw() +
   theme(
-    axis.title.x = element_text(size = 7),
-    axis.text.x = element_text(color = "black", size = 7),
-    axis.text.y = element_text(color = "black", size = 7),
+    axis.title.x = element_text(size = 9),
+    axis.text.x = element_text(color = "black", size = 9),
+    axis.text.y = element_text(color = "black", size = 9),
     legend.position = "none",
     panel.grid.minor = element_blank()
   )
@@ -811,65 +813,20 @@ ggsave(
   plot = figure5C,
   height = 1, width = 2, units = 'in'
 )
+cat("Figure 5C saved\n")
 
-cat("\nFigure 5C saved to:", figure_file_path, "Figure5/Figure5C.pdf\n")
-
-# -----------------------------------------------------------------------------
-# Figure 5D - Dot Plot for Selected ER O-GlcNAc Proteins (HepG2)
-# -----------------------------------------------------------------------------
-
-# Load necessary data and function (if running this section independently)
-if (!exists("OGlcNAc_protein_norm_HepG2")) {
-  OGlcNAc_protein_norm_HepG2 <- read_csv(
-    paste0(source_file_path, 'normalization/OGlcNAc_protein_norm_HepG2.csv')
-  )
-  cat("Loaded: OGlcNAc_protein_norm_HepG2.csv\n")
-}
-
-if (!exists("extract_log2FC_data")) {
-  extract_log2FC_data <- function(norm_data, cell_name, protein_ids) {
-    norm_data |>
-      filter(Protein.ID %in% protein_ids) |>
-      dplyr::select(Protein.ID, Gene,
-                    Intensity.Tuni_1_sl_tmm, Intensity.Tuni_2_sl_tmm, Intensity.Tuni_3_sl_tmm,
-                    Intensity.Ctrl_4_sl_tmm, Intensity.Ctrl_5_sl_tmm, Intensity.Ctrl_6_sl_tmm) |>
-      mutate(
-        mean_Ctrl = (Intensity.Ctrl_4_sl_tmm + Intensity.Ctrl_5_sl_tmm + Intensity.Ctrl_6_sl_tmm) / 3,
-        log2FC_rep1 = log2(Intensity.Tuni_1_sl_tmm / mean_Ctrl),
-        log2FC_rep2 = log2(Intensity.Tuni_2_sl_tmm / mean_Ctrl),
-        log2FC_rep3 = log2(Intensity.Tuni_3_sl_tmm / mean_Ctrl),
-        cell = cell_name
-      ) |>
-      dplyr::select(Protein.ID, Gene, cell, log2FC_rep1, log2FC_rep2, log2FC_rep3) |>
-      pivot_longer(
-        cols = starts_with("log2FC"),
-        names_to = "replicate",
-        values_to = "log2FC"
-      ) |>
-      mutate(replicate = str_replace(replicate, "log2FC_rep", ""))
-  }
-}
-
-# Selected ER proteins from HepG2
+# Figure 5D - ER proteins (HepG2)
 selected_proteins_ER <- c("P14314", "Q15084", "Q8NBS9")
 
-# Extract data for HepG2 only
 log2FC_data_ER <- extract_log2FC_data(OGlcNAc_protein_norm_HepG2, "HepG2", selected_proteins_ER) |>
   filter(!is.na(log2FC) & is.finite(log2FC))
 
-cat("\n========== Figure 5D: Selected ER O-GlcNAc Proteins (HepG2) ==========\n")
-cat("Proteins:", paste(selected_proteins_ER, collapse = ", "), "\n")
+cat("\n========== Figure 5D: ER O-GlcNAc Proteins (HepG2) ==========\n")
 print(log2FC_data_ER |> group_by(Gene) |> summarise(n = n(), mean_log2FC = mean(log2FC), .groups = "drop"))
 
-# Get gene names for ordering
-gene_labels_ER <- log2FC_data_ER |>
-  dplyr::select(Protein.ID, Gene) |>
-  distinct()
+gene_labels_ER <- log2FC_data_ER |> dplyr::select(Protein.ID, Gene) |> distinct()
+log2FC_data_ER <- log2FC_data_ER |> mutate(Gene = factor(Gene, levels = gene_labels_ER$Gene))
 
-log2FC_data_ER <- log2FC_data_ER |>
-  mutate(Gene = factor(Gene, levels = gene_labels_ER$Gene))
-
-# Create dot plot (flipped axes, HepG2 only)
 figure5D <- log2FC_data_ER |>
   ggplot(aes(x = log2FC, y = Gene)) +
   geom_vline(xintercept = 0, color = "grey50", linetype = "solid", linewidth = 0.5) +
@@ -879,9 +836,9 @@ figure5D <- log2FC_data_ER |>
   labs(x = expression(log[2](Tuni/Ctrl)), y = "") +
   theme_bw() +
   theme(
-    axis.title.x = element_text(size = 7),
-    axis.text.x = element_text(color = "black", size = 7),
-    axis.text.y = element_text(color = "black", size = 7),
+    axis.title.x = element_text(size = 9),
+    axis.text.x = element_text(color = "black", size = 9),
+    axis.text.y = element_text(color = "black", size = 9),
     legend.position = "none",
     panel.grid.minor = element_blank()
   )
@@ -891,65 +848,20 @@ ggsave(
   plot = figure5D,
   height = 1, width = 2, units = 'in'
 )
+cat("Figure 5D saved\n")
 
-cat("\nFigure 5D saved to:", figure_file_path, "Figure5/Figure5D.pdf\n")
-
-# -----------------------------------------------------------------------------
-# Figure 5E - Dot Plot for Selected Mitochondria O-GlcNAc Proteins (HepG2)
-# -----------------------------------------------------------------------------
-
-# Load necessary data and function (if running this section independently)
-if (!exists("OGlcNAc_protein_norm_HepG2")) {
-  OGlcNAc_protein_norm_HepG2 <- read_csv(
-    paste0(source_file_path, 'normalization/OGlcNAc_protein_norm_HepG2.csv')
-  )
-  cat("Loaded: OGlcNAc_protein_norm_HepG2.csv\n")
-}
-
-if (!exists("extract_log2FC_data")) {
-  extract_log2FC_data <- function(norm_data, cell_name, protein_ids) {
-    norm_data |>
-      filter(Protein.ID %in% protein_ids) |>
-      dplyr::select(Protein.ID, Gene,
-                    Intensity.Tuni_1_sl_tmm, Intensity.Tuni_2_sl_tmm, Intensity.Tuni_3_sl_tmm,
-                    Intensity.Ctrl_4_sl_tmm, Intensity.Ctrl_5_sl_tmm, Intensity.Ctrl_6_sl_tmm) |>
-      mutate(
-        mean_Ctrl = (Intensity.Ctrl_4_sl_tmm + Intensity.Ctrl_5_sl_tmm + Intensity.Ctrl_6_sl_tmm) / 3,
-        log2FC_rep1 = log2(Intensity.Tuni_1_sl_tmm / mean_Ctrl),
-        log2FC_rep2 = log2(Intensity.Tuni_2_sl_tmm / mean_Ctrl),
-        log2FC_rep3 = log2(Intensity.Tuni_3_sl_tmm / mean_Ctrl),
-        cell = cell_name
-      ) |>
-      dplyr::select(Protein.ID, Gene, cell, log2FC_rep1, log2FC_rep2, log2FC_rep3) |>
-      pivot_longer(
-        cols = starts_with("log2FC"),
-        names_to = "replicate",
-        values_to = "log2FC"
-      ) |>
-      mutate(replicate = str_replace(replicate, "log2FC_rep", ""))
-  }
-}
-
-# Selected Mitochondria proteins from HepG2
+# Figure 5E - Mitochondria proteins (HepG2)
 selected_proteins_Mito <- c("Q9H479", "P28331", "Q92667")
 
-# Extract data for HepG2 only
 log2FC_data_Mito <- extract_log2FC_data(OGlcNAc_protein_norm_HepG2, "HepG2", selected_proteins_Mito) |>
   filter(!is.na(log2FC) & is.finite(log2FC))
 
-cat("\n========== Figure 5E: Selected Mitochondria O-GlcNAc Proteins (HepG2) ==========\n")
-cat("Proteins:", paste(selected_proteins_Mito, collapse = ", "), "\n")
+cat("\n========== Figure 5E: Mitochondria O-GlcNAc Proteins (HepG2) ==========\n")
 print(log2FC_data_Mito |> group_by(Gene) |> summarise(n = n(), mean_log2FC = mean(log2FC), .groups = "drop"))
 
-# Get gene names for ordering
-gene_labels_Mito <- log2FC_data_Mito |>
-  dplyr::select(Protein.ID, Gene) |>
-  distinct()
+gene_labels_Mito <- log2FC_data_Mito |> dplyr::select(Protein.ID, Gene) |> distinct()
+log2FC_data_Mito <- log2FC_data_Mito |> mutate(Gene = factor(Gene, levels = gene_labels_Mito$Gene))
 
-log2FC_data_Mito <- log2FC_data_Mito |>
-  mutate(Gene = factor(Gene, levels = gene_labels_Mito$Gene))
-
-# Create dot plot (flipped axes, HepG2 only)
 figure5E <- log2FC_data_Mito |>
   ggplot(aes(x = log2FC, y = Gene)) +
   geom_vline(xintercept = 0, color = "grey50", linetype = "solid", linewidth = 0.5) +
@@ -959,9 +871,9 @@ figure5E <- log2FC_data_Mito |>
   labs(x = expression(log[2](Tuni/Ctrl)), y = "") +
   theme_bw() +
   theme(
-    axis.title.x = element_text(size = 7),
-    axis.text.x = element_text(color = "black", size = 7),
-    axis.text.y = element_text(color = "black", size = 7),
+    axis.title.x = element_text(size = 9),
+    axis.text.x = element_text(color = "black", size = 9),
+    axis.text.y = element_text(color = "black", size = 9),
     legend.position = "none",
     panel.grid.minor = element_blank()
   )
@@ -971,5 +883,6 @@ ggsave(
   plot = figure5E,
   height = 1, width = 2, units = 'in'
 )
+cat("Figure 5E saved\n")
 
-cat("\nFigure 5E saved to:", figure_file_path, "Figure5/Figure5E.pdf\n")
+cat("\n=== Figure 5C-5E complete ===\n")
