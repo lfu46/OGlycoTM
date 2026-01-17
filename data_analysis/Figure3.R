@@ -249,7 +249,11 @@ cat("\nFigure 3B saved to:", figure_file_path, "Figure3/\n")
 # UMAP plot of overlapping O-GlcNAc proteins using logFC as features
 # Highlights commonly up/downregulated proteins across cell types
 
+library(tidyverse)
 library(reticulate)
+
+# Source data paths, colors, and differential analysis results
+source('data_source_DE.R')
 
 # Configure Python environment
 options(reticulate.conda_binary = "/opt/anaconda3/bin/conda")
@@ -298,16 +302,16 @@ umap_result <- run_umap_proteins(
 # Convert to tibble
 umap_df <- as_tibble(umap_result)
 
-# Classify proteins as commonly up, commonly down, or other
+# Classify proteins as generally up, generally down, or other
 umap_df <- umap_df %>%
   mutate(
     Regulation = case_when(
-      Protein.ID %in% OGlcNAc_protein_commonly_up$Protein.ID ~ "Commonly Up",
-      Protein.ID %in% OGlcNAc_protein_commonly_down$Protein.ID ~ "Commonly Down",
+      Protein.ID %in% OGlcNAc_protein_commonly_up$Protein.ID ~ "Generally Up",
+      Protein.ID %in% OGlcNAc_protein_commonly_down$Protein.ID ~ "Generally Down",
       TRUE ~ "Other"
     )
   ) %>%
-  mutate(Regulation = factor(Regulation, levels = c("Commonly Up", "Commonly Down", "Other")))
+  mutate(Regulation = factor(Regulation, levels = c("Generally Up", "Generally Down", "Other")))
 
 # Print counts
 cat("Protein classification:\n")
@@ -315,14 +319,14 @@ print(table(umap_df$Regulation))
 
 # Define colors and shapes
 colors_regulation <- c(
-  "Commonly Up" = "#F39B7F",
-  "Commonly Down" = "#4DBBD5",
+  "Generally Up" = "#F39B7F",
+  "Generally Down" = "#4DBBD5",
   "Other" = "grey70"
 )
 
 shapes_regulation <- c(
-  "Commonly Up" = 17,    # solid triangle up
-  "Commonly Down" = 15,  # solid square
+  "Generally Up" = 17,    # solid triangle up
+  "Generally Down" = 15,  # solid square
   "Other" = 16           # solid circle
 )
 
@@ -342,11 +346,11 @@ Figure3C <- ggplot() +
   ) +
   scale_color_manual(
     values = colors_regulation,
-    breaks = c("Commonly Up", "Commonly Down")
+    breaks = c("Generally Up", "Generally Down")
   ) +
   scale_shape_manual(
     values = shapes_regulation,
-    breaks = c("Commonly Up", "Commonly Down")
+    breaks = c("Generally Up", "Generally Down")
   ) +
   labs(
     x = "UMAP1",

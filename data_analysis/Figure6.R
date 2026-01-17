@@ -837,8 +837,8 @@ for (pid in top_candidates) {
 # ------------------------------------------------------------------------------
 # TAB2: TGF-beta-activated kinase 1 and MAP3K7-binding protein 2
 # Length: 693 aa
-# Sites: S29 (Structured, pLDDT=88.2), S359 (IDR, pLDDT=31.8), S460 (IDR, pLDDT=53.3)
-# Demonstrates: Structured region site (S29) has positive logFC, IDR sites have negative logFC
+# Sites: S29 (Structured, pLDDT=88.2, logFC=+0.82), S359 (IDR, pLDDT=31.8, logFC=-0.27)
+# Demonstrates: Structured region site has positive logFC (~+1), IDR site has logFC slightly below 0
 
 # Load required libraries
 library(tidyverse)
@@ -860,12 +860,12 @@ Q9NYJ8_pLDDT <- structural_features |>
   filter(protein_id == "Q9NYJ8") |>
   dplyr::select(position, pLDDT)
 
-# O-GlcNAc site data for TAB2 (HEK293T only)
+# O-GlcNAc site data for TAB2 (HEK293T only) - S29 and S359 only
 Q9NYJ8_site_data <- tibble(
-  site_number = c(29, 359, 460),
-  logFC = c(0.824, -0.272, -1.54),
-  region = c("Structured", "IDR", "IDR"),
-  pLDDT_site = c(88.2, 31.8, 53.3)
+  site_number = c(29, 359),
+  logFC = c(0.824, -0.272),
+  region = c("Structured", "IDR"),
+  pLDDT_site = c(88.2, 31.8)
 )
 
 # Domain annotations for TAB2
@@ -889,7 +889,7 @@ Q9NYJ8_site_labels <- Q9NYJ8_site_data |>
 # Figure 6E Top Panel: logFC by region type
 Figure6E_top <- ggplot() +
   xlim(c(0, 693)) +
-  ylim(c(-2.0, 1.8)) +
+  ylim(c(-0.8, 1.5)) +
   # Protein bar
   geom_rect(
     data = Q9NYJ8_rect_data,
@@ -1014,4 +1014,4 @@ cat("  - Figure6A.pdf: logFC distribution\n")
 cat("  - Figure6B.pdf: Secondary structure donut plot\n")
 cat("  - Figure6C.pdf: Standardized regression coefficients\n")
 cat("  - Figure6D.pdf: IDR effect across cell types\n")
-cat("  - Figure6E.pdf: TAB2 site-specific analysis (IDR vs Structured)\n")
+cat("  - Figure6E.pdf: TAB2 site-specific analysis (S29 Structured +0.82, S359 IDR -0.27)\n")

@@ -92,6 +92,27 @@ Each figure script can run independently by sourcing `data_source.R` or `data_so
 - **Figure3.R** - Differential expression analysis (volcano plots, heatmaps)
 - **Figure4.R** - Cell-type specific analysis (circular heatmaps, GO enrichment)
 - **Figure5.R** - Subcellular localization analysis (proportion barplots, location-specific dotplots)
+- **Figure6.R** - Structural feature analysis (logFC distribution, secondary structure, IDR effects, site-specific examples)
+
+## PyMOL 3D Structure Visualization (Figure 6F)
+
+PyMOL scripts for protein structure visualization with O-GlcNAc site highlighting:
+- **Figure6F_pymol.py** - Main Python script for PyMOL, colors by pLDDT, highlights sites
+- **Figure6F_ray_modes.py** - Comparison of ray trace modes (0-3)
+
+```bash
+# Run PyMOL script (requires PyMOL installed via Homebrew)
+/opt/homebrew/bin/pymol -c -q Figure6F_pymol.py
+
+# AlphaFold structures are downloaded from:
+# https://alphafold.ebi.ac.uk/files/AF-{UniProt_ID}-F1-model_v6.pdb
+```
+
+PyMOL ray trace modes:
+- Mode 0: Default (clean, no shadows)
+- Mode 1: Shadows (realistic, publication quality)
+- Mode 2: Black outline only (line drawing)
+- Mode 3: Quantized/posterized colors
 
 ## Common Data Variables
 
@@ -103,3 +124,10 @@ After sourcing `data_source_DE.R`, these key variables are available:
 ## Analysis Logic Document
 
 `OGlycoTM_Data_Analysis_Logic.RMD` contains the master analysis workflow organized by figure (Figure 1-6) with scheduled milestones.
+
+## Key Data Insights
+
+- **O-GlcNAc sites**: ~90% are in IDR (intrinsically disordered regions), ~10% in structured regions
+- **IDR classification**: pLDDT < 50 = IDR, pLDDT ≥ 50 = Structured
+- **Site features file**: `site_features/OGlcNAc_site_features.csv` contains per-site logFC, pLDDT, is_IDR, secondary structure
+- **Proteins with sites in both regions**: Very rare (only 3-4 proteins across all cell types)

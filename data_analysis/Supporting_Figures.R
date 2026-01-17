@@ -7,7 +7,7 @@ library(rstatix)
 # Source data paths, colors, and differential analysis results
 source('data_source_DE.R')
 
-# Figure S1 ---------------------------------------------------------------
+# Figure S2 ---------------------------------------------------------------
 # Violin boxplot comparing logFC of O-GlcNAc proteins in specific functional categories
 # Categories: DNA binding, RNA binding, Transcription
 # Statistical test: Kolmogorov-Smirnov test (compares distribution shapes)
@@ -56,9 +56,9 @@ DNA_binding_proteins <- extract_proteins(common_OGlcNAc_GO, DNA_binding_terms)
 RNA_binding_proteins <- extract_proteins(common_OGlcNAc_GO, RNA_binding_terms)
 transcription_proteins <- extract_proteins(common_OGlcNAc_GO, transcription_terms)
 
-cat("Figure S1 - DNA binding proteins:", length(DNA_binding_proteins), "\n")
-cat("Figure S1 - RNA binding proteins:", length(RNA_binding_proteins), "\n")
-cat("Figure S1 - Transcription proteins:", length(transcription_proteins), "\n")
+cat("Figure S2 - DNA binding proteins:", length(DNA_binding_proteins), "\n")
+cat("Figure S2 - RNA binding proteins:", length(RNA_binding_proteins), "\n")
+cat("Figure S2 - Transcription proteins:", length(transcription_proteins), "\n")
 
 # Create combined logFC data for each category
 create_category_df <- function(proteins, category_name) {
@@ -79,14 +79,14 @@ create_category_df <- function(proteins, category_name) {
     mutate(Category = category_name)
 }
 
-FigureS1_df <- bind_rows(
+FigureS2_df <- bind_rows(
   create_category_df(DNA_binding_proteins, "DNA binding"),
   create_category_df(RNA_binding_proteins, "RNA binding"),
   create_category_df(transcription_proteins, "Transcription")
 )
 
 # Set factor levels
-FigureS1_df <- FigureS1_df %>%
+FigureS2_df <- FigureS2_df %>%
   mutate(
     CellType = factor(CellType, levels = c("HEK293T", "HepG2", "Jurkat")),
     Category = factor(Category, levels = c("DNA binding", "RNA binding", "Transcription"))
@@ -111,20 +111,20 @@ perform_ks_tests <- function(df, category_name) {
   )
 }
 
-FigureS1_ks_results <- bind_rows(
-  perform_ks_tests(FigureS1_df, "DNA binding"),
-  perform_ks_tests(FigureS1_df, "RNA binding"),
-  perform_ks_tests(FigureS1_df, "Transcription")
+FigureS2_ks_results <- bind_rows(
+  perform_ks_tests(FigureS2_df, "DNA binding"),
+  perform_ks_tests(FigureS2_df, "RNA binding"),
+  perform_ks_tests(FigureS2_df, "Transcription")
 ) %>%
   filter(!is.na(p)) %>%
   add_significance("p") %>%
   filter(p.signif != "ns")  # Remove non-significant comparisons
 
-cat("\nFigure S1 - KS Test Results:\n")
-print(FigureS1_ks_results)
+cat("\nFigure S2 - KS Test Results:\n")
+print(FigureS2_ks_results)
 
 # Add y positions for significance bars
-FigureS1_ks_results <- FigureS1_ks_results %>%
+FigureS2_ks_results <- FigureS2_ks_results %>%
   mutate(
     y.position = case_when(
       group1 == "HEK293T" & group2 == "HepG2" ~ 1.0,
@@ -135,7 +135,7 @@ FigureS1_ks_results <- FigureS1_ks_results %>%
   )
 
 # Create faceted violin boxplot
-FigureS1 <- FigureS1_df %>%
+FigureS2 <- FigureS2_df %>%
   ggplot(aes(x = CellType, y = logFC)) +
   geom_violin(aes(fill = CellType), color = "transparent") +
   geom_boxplot(color = "black", outliers = FALSE, width = 0.2, linewidth = 0.3) +
@@ -146,7 +146,7 @@ FigureS1 <- FigureS1_df %>%
     y = expression(log[2]*"(Tuni/Ctrl)")
   ) +
   stat_pvalue_manual(
-    data = FigureS1_ks_results,
+    data = FigureS2_ks_results,
     label = "p.signif",
     tip.length = 0,
     size = 3
@@ -164,13 +164,12 @@ FigureS1 <- FigureS1_df %>%
     legend.position = "none"
   )
 
-print(FigureS1)
+print(FigureS2)
 
 ggsave(
-  filename = paste0(figure_file_path, "Supporting_Figures/FigureS1.pdf"),
-  plot = FigureS1,
+  filename = paste0(figure_file_path, "Supporting_Figures/FigureS2.pdf"),
+  plot = FigureS2,
   width = 2, height = 1.5, units = "in"
 )
 
-cat("\nFigure S1 saved to:", figure_file_path, "Supporting_Figures/\n")
-
+cat("\nFigure S2 saved to:", figure_file_path, "Supporting_Figures/\n")
