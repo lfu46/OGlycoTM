@@ -1,12 +1,25 @@
-# Figure 6: O-GlcNAc Site Structural Regression Analysis
-# Identify structural and sequence features associated with treatment-induced fold changes
+# Figure 6: O-GlcNAc Site Structural Feature Analysis
 #
-# Figure outputs:
-#   - Figure 6A: logFC distribution of O-GlcNAc sites by cell type
-#   - Figure 6B: Donut plot of secondary structure distribution
+# This analysis investigates structural and sequence features associated with
+# tunicamycin-induced O-GlcNAc fold changes across three cell types.
+#
+# Key Finding: O-GlcNAc sites in structured regions (pLDDT >= 50) show larger
+# treatment responses compared to sites in IDR regions (pLDDT < 50).
+#
+# Figure Panels:
+#   - Figure 6A: logFC distribution by cell type
+#   - Figure 6B: Secondary structure distribution (donut plot)
 #   - Figure 6C: Standardized regression coefficients
-#   - Figure 6D: IDR effect across cell types
-#   - Figure 6E: pPSE_24 exposure effect across cell types
+#   - Figure 6D: IDR vs Structured effect across cell types
+#   - Figure 6E: HYOU1 T871 - Structured region example (logFC = +2.47, pLDDT = 94.1)
+#   - Figure 6F: HOXA13 S199 - IDR region example (logFC = -0.02, pLDDT = 41.6)
+#
+# Data files generated:
+#   - site_features/OGlcNAc_site_features.csv
+#   - site_features/regression_coefficients_standardized.csv
+#
+# Data files required:
+#   - site_features/alphafold_structural_features.csv (pLDDT profiles)
 
 # ==============================================================================
 # PART 1: DATA PREPARATION AND FEATURE EXTRACTION
@@ -17,14 +30,13 @@ source('data_source.R')
 source('data_source_DE.R')
 
 # Additional packages
-library(Peptides)  # for sequence property calculations
+library(Peptides)
 library(ggpubr)
 
 # ------------------------------------------------------------------------------
 # Section 1.1: Load Site-Level Differential Analysis Data
 # ------------------------------------------------------------------------------
 
-# Load site-level DE results
 OGlcNAc_site_DE_HEK293T <- read_csv(
   paste0(source_file_path, 'differential_analysis/OGlcNAc_site_DE_HEK293T.csv'),
   show_col_types = FALSE
@@ -38,7 +50,6 @@ OGlcNAc_site_DE_Jurkat <- read_csv(
   show_col_types = FALSE
 )
 
-# Summary of site-level DE data
 cat("=== Site-Level Differential Expression Data Summary ===\n")
 cat("HEK293T:", nrow(OGlcNAc_site_DE_HEK293T), "sites\n")
 cat("HepG2:", nrow(OGlcNAc_site_DE_HepG2), "sites\n")
@@ -48,7 +59,6 @@ cat("Jurkat:", nrow(OGlcNAc_site_DE_Jurkat), "sites\n\n")
 # Section 1.2: Extract Basic Features
 # ------------------------------------------------------------------------------
 
-# Function to extract basic features from site data
 extract_basic_features <- function(site_data, de_data) {
   site_info <- site_data |>
     group_by(site_index) |>
@@ -331,7 +341,6 @@ cat("Adj R-squared:", round(summary(model_main)$adj.r.squared, 4), "\n\n")
 # Extract coefficients
 coef_main <- as.data.frame(summary(model_main)$coefficients)
 coef_main$term <- rownames(coef_main)
-# Use column indices for robust renaming (columns are: Estimate, Std. Error, t value, Pr(>|t|))
 colnames(coef_main)[1:4] <- c("estimate", "std_error", "t_value", "p_value")
 coef_main <- coef_main |>
   mutate(
@@ -397,6 +406,9 @@ if (!exists("source_file_path")) {
 library(tidyverse)
 library(ggpubr)
 
+# Create output directory
+dir.create(paste0(figure_file_path, 'Figure6'), showWarnings = FALSE)
+
 # Load pre-computed features if not already in environment
 if (!exists("features_analysis")) {
   cat("Loading pre-computed site features...\n")
@@ -415,6 +427,12 @@ if (!exists("coef_main_std")) {
     show_col_types = FALSE
   )
 }
+
+# Load structural features (for pLDDT profiles)
+structural_features <- read_csv(
+  paste0(source_file_path, 'site_features/alphafold_structural_features.csv'),
+  show_col_types = FALSE
+)
 
 # Prepare regression data if not already in environment
 if (!exists("reg_data_combined")) {
@@ -437,24 +455,8 @@ if (!exists("reg_data_combined")) {
 # --- End standalone imports ---
 
 # ------------------------------------------------------------------------------
-# Figure 6A: logFC Distribution of O-GlcNAc Sites by Cell Type
+# Figure 6A: logFC Distribution by Cell Type
 # ------------------------------------------------------------------------------
-
-# Load required libraries
-library(tidyverse)
-
-# Source data paths and colors
-source('data_source.R')
-
-# Create output directory
-dir.create(paste0(figure_file_path, 'Figure6'), showWarnings = FALSE)
-
-# Load pre-computed features
-features_analysis <- read_csv(
-  paste0(source_file_path, 'site_features/OGlcNAc_site_features.csv'),
-  show_col_types = FALSE
-)
-cat("Loaded", nrow(features_analysis), "sites\n")
 
 Figure6A <- features_analysis |>
   ggplot(aes(x = logFC, fill = cell)) +
@@ -480,39 +482,19 @@ Figure6A <- features_analysis |>
 
 ggsave(
   paste0(figure_file_path, 'Figure6/Figure6A.pdf'),
-  Figure6A,
-  width = 2,
-  height = 1.5
+  Figure6A, width = 2, height = 1.5
 )
 cat("\nFigure 6A saved.\n")
 
 # ------------------------------------------------------------------------------
-# Figure 6B: Donut Plot of Secondary Structure Distribution
+# Figure 6B: Secondary Structure Distribution (Donut Plot)
 # ------------------------------------------------------------------------------
 
-# Load required libraries
-library(tidyverse)
-
-# Source data paths and colors
-source('data_source.R')
-
-# Create output directory
-dir.create(paste0(figure_file_path, 'Figure6'), showWarnings = FALSE)
-
-# Load pre-computed features
-features_analysis <- read_csv(
-  paste0(source_file_path, 'site_features/OGlcNAc_site_features.csv'),
-  show_col_types = FALSE
-)
-cat("Loaded", nrow(features_analysis), "sites\n")
-
-# Prepare data for donut chart
 ss_counts <- features_analysis |>
   filter(!is.na(secondary_structure_simple)) |>
   group_by(secondary_structure_simple) |>
   summarize(count = n(), .groups = "drop") |>
   mutate(
-    # Rename categories for display
     category = case_when(
       secondary_structure_simple == "STRN" ~ "Strand",
       secondary_structure_simple == "BEND" ~ "Bend",
@@ -525,23 +507,8 @@ ss_counts <- features_analysis |>
   mutate(
     ymax = cumsum(percentage),
     ymin = lag(ymax, default = 0),
-    label_pos = (ymin + ymax) / 2
-  )
-
-# Define colors for secondary structure (using color_palette from data_source.R)
-# Note: Only Strand, Bend, and Unstructured are present in the data
-# No Helix or Turn - O-GlcNAc sites are predominantly in disordered regions
-ss_colors <- c(
-  "Strand" = color_palette[2],        # "#4DBBD5" blue
-  "Bend" = color_palette[3],          # "#00A087" green
-  "Unstructured" = color_palette[6]   # "#8491B4" grey
-)
-
-# Manually adjust label positions to avoid overlap
-ss_counts <- ss_counts |>
-  mutate(
+    label_pos = (ymin + ymax) / 2,
     label_text = paste0(round(percentage, 1), "%"),
-    # Manually set y positions for small slices to spread them apart
     label_y_adjusted = case_when(
       category == "Strand" ~ label_pos - 2,
       category == "Bend" ~ label_pos + 3,
@@ -549,50 +516,41 @@ ss_counts <- ss_counts |>
     )
   )
 
+ss_colors <- c(
+  "Strand" = color_palette[2],
+  "Bend" = color_palette[3],
+  "Unstructured" = color_palette[6]
+)
+
 Figure6B <- ggplot(ss_counts, aes(ymax = ymax, ymin = ymin, xmax = 5, xmin = 2.8, fill = category)) +
   geom_rect(color = "white", linewidth = 0.3) +
-  # Labels for large slices (inside donut)
   geom_text(
     data = ss_counts |> filter(percentage >= 10),
     aes(x = 3.9, y = label_pos, label = label_text),
-    size = 3.2,
-    color = "black"
+    size = 3.2, color = "black"
   ) +
-  # Labels for small slices (outside donut) - manually adjusted positions
   geom_text(
     data = ss_counts |> filter(category == "Strand"),
     aes(x = 5.8, y = label_y_adjusted, label = paste0(category, " (", label_text, ")")),
-    size = 2.8,
-    color = "black",
-    hjust = 0
+    size = 2.8, color = "black", hjust = 0
   ) +
   geom_text(
     data = ss_counts |> filter(category == "Bend"),
     aes(x = 5.8, y = label_y_adjusted, label = paste0(category, " (", label_text, ")")),
-    size = 2.8,
-    color = "black",
-    hjust = 0
+    size = 2.8, color = "black", hjust = 0
   ) +
-  # Connector lines from slices to labels
   geom_segment(
     data = ss_counts |> filter(category == "Strand"),
     aes(x = 5, xend = 5.6, y = label_pos, yend = label_y_adjusted),
-    color = "grey50",
-    linewidth = 0.3
+    color = "grey50", linewidth = 0.3
   ) +
   geom_segment(
     data = ss_counts |> filter(category == "Bend"),
     aes(x = 5, xend = 5.6, y = label_pos, yend = label_y_adjusted),
-    color = "grey50",
-    linewidth = 0.3
+    color = "grey50", linewidth = 0.3
   ) +
-  annotate(
-    "text",
-    x = 0, y = 0,
-    label = "Secondary\nStructure",
-    size = 3.2,
-    fontface = "bold"
-  ) +
+  annotate("text", x = 0, y = 0, label = "Secondary\nStructure",
+           size = 3.2, fontface = "bold") +
   coord_polar(theta = "y") +
   xlim(c(0, 6.5)) +
   scale_fill_manual(values = ss_colors) +
@@ -606,31 +564,13 @@ Figure6B <- ggplot(ss_counts, aes(ymax = ymax, ymin = ymin, xmax = 5, xmin = 2.8
 
 ggsave(
   paste0(figure_file_path, 'Figure6/Figure6B.pdf'),
-  Figure6B,
-  width = 2,
-  height = 2
+  Figure6B, width = 2, height = 2
 )
 cat("Figure 6B saved.\n")
 
 # ------------------------------------------------------------------------------
 # Figure 6C: Standardized Regression Coefficients
 # ------------------------------------------------------------------------------
-
-# Load required libraries
-library(tidyverse)
-
-# Source data paths and colors
-source('data_source.R')
-
-# Create output directory
-dir.create(paste0(figure_file_path, 'Figure6'), showWarnings = FALSE)
-
-# Load regression coefficients
-coef_main_std <- read_csv(
-  paste0(source_file_path, 'site_features/regression_coefficients_standardized.csv'),
-  show_col_types = FALSE
-)
-cat("Loaded regression coefficients\n")
 
 coef_plot_std <- coef_main_std |>
   filter(!grepl("Intercept|secondary_structure", term)) |>
@@ -680,47 +620,13 @@ Figure6C <- coef_plot_std |>
 
 ggsave(
   paste0(figure_file_path, 'Figure6/Figure6C.pdf'),
-  Figure6C,
-  width = 3,
-  height = 2
+  Figure6C, width = 3, height = 2
 )
 cat("Figure 6C saved.\n")
 
 # ------------------------------------------------------------------------------
-# Figure 6D: IDR Effect Across Cell Types
+# Figure 6D: IDR vs Structured Effect Across Cell Types
 # ------------------------------------------------------------------------------
-
-# Load required libraries
-library(tidyverse)
-
-# Source data paths and colors
-source('data_source.R')
-
-# Create output directory
-dir.create(paste0(figure_file_path, 'Figure6'), showWarnings = FALSE)
-
-# Load pre-computed features
-features_analysis <- read_csv(
-  paste0(source_file_path, 'site_features/OGlcNAc_site_features.csv'),
-  show_col_types = FALSE
-)
-cat("Loaded", nrow(features_analysis), "sites\n")
-
-# Prepare regression data
-reg_data_combined <- features_analysis |>
-  filter(!is.na(logFC)) |>
-  dplyr::select(
-    logFC, cell, is_serine, sites_per_protein, pI_7mer, hydrophobicity_7mer,
-    log_protein_abundance, pLDDT, pPSE_24, pPSE_12, is_IDR, secondary_structure_simple
-  ) |>
-  mutate(
-    cell = factor(cell, levels = c("HEK293T", "HepG2", "Jurkat")),
-    secondary_structure_simple = factor(secondary_structure_simple),
-    is_serine = factor(is_serine, levels = c(0, 1), labels = c("Thr", "Ser")),
-    is_IDR = factor(is_IDR, levels = c(0, 1), labels = c("Structured", "IDR"))
-  ) |>
-  filter(complete.cases(pick(everything())))
-cat("Prepared", nrow(reg_data_combined), "sites for plotting\n")
 
 interaction_data <- reg_data_combined |>
   group_by(cell, is_IDR) |>
@@ -735,7 +641,8 @@ Figure6D <- interaction_data |>
   ggplot(aes(x = cell, y = mean_logFC, fill = is_IDR)) +
   geom_col(position = position_dodge(width = 0.7), width = 0.6) +
   geom_errorbar(aes(ymin = mean_logFC - se_logFC, ymax = mean_logFC + se_logFC),
-                position = position_dodge(width = 0.7), width = 0.15, linewidth = 0.3, color = "grey30") +
+                position = position_dodge(width = 0.7), width = 0.15,
+                linewidth = 0.3, color = "grey30") +
   geom_hline(yintercept = 0, linetype = "dashed", color = "grey50") +
   scale_fill_manual(values = c("Structured" = color_palette[4], "IDR" = color_palette[1])) +
   labs(
@@ -756,197 +663,117 @@ Figure6D <- interaction_data |>
 
 ggsave(
   paste0(figure_file_path, 'Figure6/Figure6D.pdf'),
-  Figure6D,
-  width = 2,
-  height = 2
+  Figure6D, width = 2, height = 2
 )
 cat("Figure 6D saved.\n")
 
 # ------------------------------------------------------------------------------
-# Figure 6F Example Exploration: Find proteins with IDR vs Structured differences
+# Figure 6E: HYOU1 (Q9Y4L1) - Structured Region Example
 # ------------------------------------------------------------------------------
-# Goal: Find proteins where O-GlcNAc sites in structured regions have larger
-# logFC than sites in IDR regions
+# HYOU1: Hypoxia up-regulated protein 1 (GRP170/ORP150)
+# ER chaperone, HSP70 family member
+# Length: 999 aa
+#
+# O-GlcNAc Site: T871
+#   - Located in Domain D (SBDα): α-helical lid domain (residues 716-999)
+#   - logFC: +2.47 (5.5-fold increase with tunicamycin)
+#   - pLDDT: 94.12 (very high confidence - structured)
+#   - adj.P.Val: 1.5e-05 (highly significant)
+#
+# Domain Architecture:
+#   - Domain A (NBD): 1-430 - Nucleotide binding domain
+#   - Domain B (SBDβ): 431-600 - Substrate binding β-sheet domain
+#   - Domain C: 601-715 - Acidic unstructured loop
+#   - Domain D (SBDα): 716-999 - α-helical lid domain (contains T871)
 
-# Load required libraries
-library(tidyverse)
-
-# Source data paths and colors
-source('data_source.R')
-
-# Load pre-computed features
-features_analysis <- read_csv(
-  paste0(source_file_path, 'site_features/OGlcNAc_site_features.csv'),
-  show_col_types = FALSE
-)
-
-# Find proteins with sites in BOTH structured and IDR regions
-proteins_with_both <- features_analysis |>
-  filter(!is.na(is_IDR), !is.na(logFC)) |>
-  group_by(Protein.ID, Gene) |>
-  summarize(
-    n_structured = sum(is_IDR == 0),
-    n_IDR = sum(is_IDR == 1),
-    n_total = n(),
-    n_cells = n_distinct(cell),
-    mean_logFC_structured = mean(logFC[is_IDR == 0], na.rm = TRUE),
-    mean_logFC_IDR = mean(logFC[is_IDR == 1], na.rm = TRUE),
-    .groups = "drop"
-  ) |>
-  filter(n_structured >= 1, n_IDR >= 1) |>  # At least 1 site in each region
-  mutate(
-    logFC_diff = abs(mean_logFC_structured) - abs(mean_logFC_IDR),
-    supports_hypothesis = abs(mean_logFC_structured) > abs(mean_logFC_IDR)
-  ) |>
-  arrange(desc(logFC_diff))
-
-cat("\n=== Proteins with sites in BOTH Structured and IDR regions ===\n")
-cat("Total proteins:", nrow(proteins_with_both), "\n")
-cat("Proteins supporting hypothesis (|structured logFC| > |IDR logFC|):",
-    sum(proteins_with_both$supports_hypothesis), "\n\n")
-
-cat("Top 15 candidate proteins for Figure 6F:\n")
-proteins_with_both |>
-  filter(supports_hypothesis) |>
-  head(15) |>
-  print(n = 15)
-
-# Detailed view of top candidates
-cat("\n\n=== Detailed site-level data for top candidates ===\n")
-
-top_candidates <- proteins_with_both |>
-  filter(supports_hypothesis) |>
-  head(10) |>
-  pull(Protein.ID)
-
-for (pid in top_candidates) {
-  gene_name <- proteins_with_both |> filter(Protein.ID == pid) |> pull(Gene)
-  cat("\n--- ", pid, " (", gene_name, ") ---\n", sep = "")
-
-  site_details <- features_analysis |>
-    filter(Protein.ID == pid) |>
-    dplyr::select(site_number, cell, logFC, is_IDR, secondary_structure_simple, pLDDT) |>
-    mutate(region = ifelse(is_IDR == 1, "IDR", "Structured")) |>
-    arrange(site_number, cell)
-
-  print(site_details, n = Inf)
-}
-
-# ------------------------------------------------------------------------------
-# Figure 6E: TAB2 (Q9NYJ8) Site-Specific O-GlcNAc Analysis - HEK293T
-# ------------------------------------------------------------------------------
-# TAB2: TGF-beta-activated kinase 1 and MAP3K7-binding protein 2
-# Length: 693 aa
-# Sites: S29 (Structured, pLDDT=88.2, logFC=+0.82), S359 (IDR, pLDDT=31.8, logFC=-0.27)
-# Demonstrates: Structured region site has positive logFC (~+1), IDR site has logFC slightly below 0
-
-# Load required libraries
-library(tidyverse)
-library(ggpubr)
-
-# Source data paths and colors
-source('data_source.R')
-
-# Create output directory
-dir.create(paste0(figure_file_path, 'Figure6'), showWarnings = FALSE)
-
-# Load pLDDT data for TAB2
-structural_features <- read_csv(
-  paste0(source_file_path, 'site_features/alphafold_structural_features.csv'),
-  show_col_types = FALSE
-)
-
-Q9NYJ8_pLDDT <- structural_features |>
-  filter(protein_id == "Q9NYJ8") |>
+# pLDDT profile for HYOU1
+Q9Y4L1_pLDDT <- structural_features |>
+  filter(protein_id == "Q9Y4L1") |>
   dplyr::select(position, pLDDT)
 
-# O-GlcNAc site data for TAB2 (HEK293T only) - S29 and S359 only
-Q9NYJ8_site_data <- tibble(
-  site_number = c(29, 359),
-  logFC = c(0.824, -0.272),
-  region = c("Structured", "IDR"),
-  pLDDT_site = c(88.2, 31.8)
+# O-GlcNAc site data (HEK293T)
+Q9Y4L1_site_data <- tibble(
+  site_number = 871,
+  logFC = 2.465,
+  region = "Structured",
+  pLDDT_site = 94.12
 )
 
-# Domain annotations for TAB2
-Q9NYJ8_domain_data <- tribble(
+# Domain annotations for HYOU1
+Q9Y4L1_domain_data <- tribble(
   ~domain, ~start_position, ~end_position,
-  "CUE", 8, 51,
-  "Coiled coil", 532, 619,
-  "ZnF RanBP2", 663, 693
+  "NBD", 1, 430,
+ "SBDβ", 431, 600,
+  "Acidic loop", 601, 715,
+ "SBDα", 716, 999
 )
 
-# Protein bar rectangle
-Q9NYJ8_rect_data <- tribble(
+Q9Y4L1_rect_data <- tribble(
   ~start, ~end, ~top, ~bottom,
-  0, 693, 1.0, 1.4
+  0, 999, 1.5, 2.0
 )
 
-# Site labels
-Q9NYJ8_site_labels <- Q9NYJ8_site_data |>
-  mutate(label = paste0("S", site_number))
+Q9Y4L1_site_labels <- Q9Y4L1_site_data |>
+  mutate(label = paste0("T", site_number))
 
-# Figure 6E Top Panel: logFC by region type
+# Top panel: Domain architecture with O-GlcNAc site
 Figure6E_top <- ggplot() +
-  xlim(c(0, 693)) +
-  ylim(c(-0.8, 1.5)) +
+  xlim(c(0, 999)) +
+  ylim(c(-0.5, 3.5)) +
   # Protein bar
   geom_rect(
-    data = Q9NYJ8_rect_data,
+    data = Q9Y4L1_rect_data,
     aes(xmin = start, xmax = end, ymin = bottom, ymax = top),
     fill = "gray80", color = "black", linewidth = 0.3, alpha = 0.8
   ) +
   # Domain regions
   geom_rect(
-    data = Q9NYJ8_domain_data,
+    data = Q9Y4L1_domain_data,
     aes(xmin = start_position, xmax = end_position,
-        ymin = Q9NYJ8_rect_data$bottom, ymax = Q9NYJ8_rect_data$top,
+        ymin = Q9Y4L1_rect_data$bottom, ymax = Q9Y4L1_rect_data$top,
         fill = domain),
     alpha = 0.7
   ) +
-  # Vertical lines connecting sites to protein bar
+  # Vertical line connecting site to protein bar
   geom_segment(
-    data = Q9NYJ8_site_labels,
+    data = Q9Y4L1_site_labels,
     aes(x = site_number, xend = site_number,
-        y = Q9NYJ8_rect_data$bottom, yend = logFC),
+        y = Q9Y4L1_rect_data$bottom, yend = logFC),
     linetype = "dotted", color = "grey50", linewidth = 0.3
   ) +
-  # Site markers at protein bar
+  # Site marker at protein bar
   geom_point(
-    data = Q9NYJ8_site_labels,
-    aes(x = site_number, y = Q9NYJ8_rect_data$top),
+    data = Q9Y4L1_site_labels,
+    aes(x = site_number, y = Q9Y4L1_rect_data$top),
     shape = 25, size = 1.5, fill = "black", color = "black"
   ) +
-  # Site labels
+  # Site label
   geom_text(
-    data = Q9NYJ8_site_labels,
-    aes(x = site_number, y = Q9NYJ8_rect_data$top + 0.25, label = label),
+    data = Q9Y4L1_site_labels,
+    aes(x = site_number, y = Q9Y4L1_rect_data$top + 0.3, label = label),
     size = 2.5, color = "black", angle = 90, hjust = 0
   ) +
   # Horizontal line at y=0
   geom_hline(yintercept = 0, linetype = "dashed", color = "grey50", linewidth = 0.4) +
-  # logFC points colored by region
+  # logFC point
   geom_point(
-    data = Q9NYJ8_site_data,
-    aes(x = site_number, y = logFC, color = region, shape = region),
-    size = 1.8
+    data = Q9Y4L1_site_data,
+    aes(x = site_number, y = logFC),
+    color = color_palette[4], size = 2
   ) +
   scale_fill_manual(
     name = "Domain",
     values = c(
-      "CUE" = color_palette[1],
-      "Coiled coil" = color_palette[2],
-      "ZnF RanBP2" = color_palette[3]
+      "NBD" = color_palette[2],
+     "SBDβ" = color_palette[3],
+      "Acidic loop" = color_palette[6],
+     "SBDα" = color_palette[4]
     )
   ) +
-  scale_color_manual(values = c("Structured" = color_palette[4], "IDR" = color_palette[1])) +
-  scale_shape_manual(values = c("Structured" = 16, "IDR" = 17)) +
   labs(
     x = "",
     y = expression(log[2](Tuni/Ctrl)),
-    title = "TAB2",
-    color = "Region",
-    shape = "Region"
+    title = "HYOU1 (Structured)"
   ) +
   theme_bw() +
   theme(
@@ -962,25 +789,19 @@ Figure6E_top <- ggplot() +
     panel.grid.major.x = element_blank(),
     panel.grid.minor.x = element_blank(),
     plot.margin = margin(5, 5, 0, 5)
-  ) +
-  guides(
-    fill = guide_legend(order = 1, ncol = 1),
-    color = guide_legend(order = 2, ncol = 1),
-    shape = guide_legend(order = 2, ncol = 1)
   )
 
-# Figure 6E Bottom Panel: pLDDT profile
-Figure6E_bottom <- ggplot(Q9NYJ8_pLDDT, aes(x = position, y = pLDDT)) +
+# Bottom panel: pLDDT profile
+Figure6E_bottom <- ggplot(Q9Y4L1_pLDDT, aes(x = position, y = pLDDT)) +
   geom_line(color = "black", linewidth = 0.4) +
   geom_hline(yintercept = 50, linetype = "dashed", color = "red", linewidth = 0.4) +
-  # Mark O-GlcNAc sites
+  # Mark O-GlcNAc site
   geom_point(
-    data = Q9NYJ8_site_data,
-    aes(x = site_number, y = pLDDT_site, color = region),
-    size = 1
+    data = Q9Y4L1_site_data,
+    aes(x = site_number, y = pLDDT_site),
+    color = color_palette[4], size = 1.5
   ) +
-  scale_color_manual(values = c("Structured" = color_palette[4], "IDR" = color_palette[1])) +
-  coord_cartesian(xlim = c(0, 693)) +
+  coord_cartesian(xlim = c(0, 999)) +
   scale_y_continuous(limits = c(0, 100), breaks = c(0, 50, 100)) +
   labs(x = "Amino acid position", y = "pLDDT") +
   theme_classic() +
@@ -991,10 +812,8 @@ Figure6E_bottom <- ggplot(Q9NYJ8_pLDDT, aes(x = position, y = pLDDT)) +
     plot.margin = margin(0, 5, 5, 5)
   )
 
-# Combine panels
 Figure6E <- ggarrange(
-  Figure6E_top,
-  Figure6E_bottom,
+  Figure6E_top, Figure6E_bottom,
   ncol = 1, nrow = 2,
   heights = c(2, 1),
   align = "v",
@@ -1003,15 +822,34 @@ Figure6E <- ggarrange(
 
 ggsave(
   paste0(figure_file_path, 'Figure6/Figure6E.pdf'),
-  Figure6E,
-  width = 3, height = 2
+  Figure6E, width = 3, height = 2
 )
-cat("Figure 6E (TAB2) saved.\n")
+cat("Figure 6E (HYOU1) saved.\n")
 
-cat("\n=== Figure 6 Analysis Complete ===\n")
-cat("Generated figures:\n")
-cat("  - Figure6A.pdf: logFC distribution\n")
-cat("  - Figure6B.pdf: Secondary structure donut plot\n")
+# ------------------------------------------------------------------------------
+# Figure 6F: HOXA13 (P31271) - IDR Region Example (3D Structure by PyMOL)
+# ------------------------------------------------------------------------------
+# HOXA13: Homeobox protein Hox-A13
+# Transcription factor involved in limb development
+# Length: 388 aa
+#
+# O-GlcNAc Site: S199
+#   - Located in disordered N-terminal region
+#   - logFC: -0.019 (essentially no change with tunicamycin)
+#   - pLDDT: 41.62 (low confidence - IDR)
+#   - adj.P.Val: 0.85 (not significant)
+#
+# 3D structure generated by Figure6F_HOXA13_pymol.py
+# The PyMOL script visualizes:
+#   - AlphaFold structure colored by pLDDT confidence
+#   - O-GlcNAc site S199 highlighted as cyan sphere
+#   - Transparent surface overlay showing secondary structure
+
+cat("\n=== Figure 6 Complete ===\n")
+cat("Generated panels:\n")
+cat("  - Figure6A.pdf: logFC distribution by cell type\n")
+cat("  - Figure6B.pdf: Secondary structure distribution\n")
 cat("  - Figure6C.pdf: Standardized regression coefficients\n")
-cat("  - Figure6D.pdf: IDR effect across cell types\n")
-cat("  - Figure6E.pdf: TAB2 site-specific analysis (S29 Structured +0.82, S359 IDR -0.27)\n")
+cat("  - Figure6D.pdf: IDR vs Structured effect\n")
+cat("  - Figure6E.pdf: HYOU1 T871 (Structured, logFC=+2.47, pLDDT=94.1)\n")
+cat("  - Figure6F: HOXA13 S199 3D structure (IDR, logFC=-0.02, pLDDT=41.6) - see PyMOL script\n")
