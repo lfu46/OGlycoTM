@@ -94,18 +94,23 @@ Each figure script can run independently by sourcing `data_source.R` or `data_so
 - **Figure5.R** - Subcellular localization analysis (proportion barplots, location-specific dotplots)
 - **Figure6.R** - Structural feature analysis (logFC distribution, secondary structure, IDR effects, site-specific examples)
 
-## PyMOL 3D Structure Visualization (Figure 6F)
+## PyMOL 3D Structure Visualization (Figure 6E/6F)
 
 PyMOL scripts for protein structure visualization with O-GlcNAc site highlighting:
-- **Figure6F_pymol.py** - Main Python script for PyMOL, colors by pLDDT, highlights sites
-- **Figure6F_ray_modes.py** - Comparison of ray trace modes (0-3)
+- **Figure6E_*_pymol.py** - Candidate structured region sites (DDX50_Y492, PWP2_T23, PRDX6_T95, PRDX6_Y89)
+- **Figure6F_*_pymol.py** - IDR region site examples (EWSR1_S274, etc.)
+
+All PyMOL scripts share consistent formatting:
+- pLDDT coloring (blue=high confidence, orange=low)
+- Transparent surface (70% transparency)
+- Site highlighted as colored spheres (orange=upregulated, cyan=stable)
 
 ```bash
 # Run PyMOL script (requires PyMOL installed via Homebrew)
-/opt/homebrew/bin/pymol -c -q Figure6F_pymol.py
+/opt/homebrew/bin/pymol -c -q Figure6E_PRDX6_T95_pymol.py
 
 # AlphaFold structures are downloaded from:
-# https://alphafold.ebi.ac.uk/files/AF-{UniProt_ID}-F1-model_v6.pdb
+# https://alphafold.ebi.ac.uk/files/AF-{UniProt_ID}-F1-model_v4.pdb (or v6)
 ```
 
 PyMOL ray trace modes:
@@ -113,6 +118,28 @@ PyMOL ray trace modes:
 - Mode 1: Shadows (realistic, publication quality)
 - Mode 2: Black outline only (line drawing)
 - Mode 3: Quantized/posterized colors
+
+## MS/MS Spectrum Annotation (Python)
+
+Python modules for EThcD spectrum extraction and annotation:
+- **fragment_calculator.py** - Calculates theoretical m/z for b/y/c/z ions with modifications
+- **spectrum_annotator.py** - Creates publication-quality annotated spectra (IPSA-style)
+- **extract_ethcd_spectra.py** - Extracts EThcD spectra from calibrated mzML files
+
+```bash
+# Run spectrum annotation (requires pyteomics, numpy, pandas, matplotlib)
+python spectrum_annotator.py
+
+# Key parameters:
+# - Mass tolerance: 20 ppm
+# - Ion types: b, y (HCD), c, z (ETD), Y (intact glycopeptide), oxonium
+# - Uses calibrated.mzML files for accurate mass matching
+```
+
+Spectrum data locations:
+- mzML files: `/Volumes/cos-lab-rwu60/Longping/OGlycoTM_Final_Version/OGlycoTM_{cell_type}/`
+- EThcD ranked files: `data_source/point_to_point_response/OGlcNAc_Level1_{cell_type}_EThcD_ranked.csv`
+- Extracted spectra: `data_source/point_to_point_response/{cell_type}_ethcd_spectra/`
 
 ## Common Data Variables
 
@@ -128,6 +155,7 @@ After sourcing `data_source_DE.R`, these key variables are available:
 ## Key Data Insights
 
 - **O-GlcNAc sites**: ~90% are in IDR (intrinsically disordered regions), ~10% in structured regions
-- **IDR classification**: pLDDT < 50 = IDR, pLDDT ≥ 50 = Structured
-- **Site features file**: `site_features/OGlcNAc_site_features.csv` contains per-site logFC, pLDDT, is_IDR, secondary structure
+- **IDR classification**: Uses StructureMap's pPSE method - smoothed `nAA_24_180_pae` (pPSE_24_smooth10) ≤ 34.27 = IDR. This is calculated in `structuremap_analysis.py` following the StructureMap tutorial. Note: pLDDT is included as a regression predictor but is NOT used for IDR classification.
+- **Site features file**: `site_features/OGlcNAc_site_features.csv` contains per-site logFC, pLDDT, is_IDR, secondary structure, pPSE_24, pPSE_12, pPSE_24_smooth10
 - **Proteins with sites in both regions**: Very rare (only 3-4 proteins across all cell types)
+- **OGlcNAc Atlas reference**: `reference/OGlcNAcAtlas_unambiguous_sites_20251208.csv` for checking reported vs novel sites
