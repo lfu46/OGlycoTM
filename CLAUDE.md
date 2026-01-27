@@ -159,3 +159,20 @@ After sourcing `data_source_DE.R`, these key variables are available:
 - **Site features file**: `site_features/OGlcNAc_site_features.csv` contains per-site logFC, pLDDT, is_IDR, secondary structure, pPSE_24, pPSE_12, pPSE_24_smooth10
 - **Proteins with sites in both regions**: Very rare (only 3-4 proteins across all cell types)
 - **OGlcNAc Atlas reference**: `reference/OGlcNAcAtlas_unambiguous_sites_20251208.csv` for checking reported vs novel sites
+
+## Markdown to PDF Conversion
+
+Convert markdown files to text-selectable PDF using pandoc:
+
+```bash
+pandoc "input.md" -o "output.pdf" --pdf-engine=xelatex \
+  -V geometry:margin=1in -V fontsize=11pt -V mainfont="Times New Roman" \
+  --toc -V colorlinks=true -V linkcolor=blue -V urlcolor=blue
+```
+
+If Unicode subscripts (₁₀) cause issues, pipe through sed first:
+```bash
+sed 's/log₁₀/log10/g' "input.md" | pandoc -o "output.pdf" --pdf-engine=xelatex \
+  -V geometry:margin=1in -V fontsize=11pt -V mainfont="Times New Roman" \
+  --toc -V colorlinks=true
+```
