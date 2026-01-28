@@ -360,16 +360,20 @@ write_csv(oppositely_regulated_table, paste0(source_file_path, 'circular_heatmap
 cat("\nOppositely regulated proteins table saved to:", source_file_path, "circular_heatmap/oppositely_regulated_proteins.csv\n")
 
 # =============================================================================
-# Figure 4D - Dot Plot for Selected Oppositely Regulated Proteins
+# Figure 4D - HEK293T Example Proteins Dot Plot (Self-contained)
 # =============================================================================
-# Dot plot showing log2(Tuni/Ctrl) for selected proteins across cell types
-# Proteins: Q9Y4L1 (HYOU1), P27540 (ARNT), Q9UHY1 (NRBP1)
+# Dot plot showing log2(Tuni/Ctrl) for selected HEK293T proteins across cell types
+# Proteins: PHGDH (O43175), CREB1 (P16220), DDX17 (Q92841)
+# Uses free y-axis scales for each facet to accommodate different fold change ranges
+# Run this section independently to regenerate Figure 4D
 
-# Load required libraries
 library(tidyverse)
 
 # Source data paths and colors
-source('data_source_DE.R')
+source('data_source.R')
+
+# Create output directory
+dir.create(paste0(figure_file_path, "Figure4"), showWarnings = FALSE)
 
 # Load normalized O-GlcNAc protein data
 OGlcNAc_protein_norm_HEK293T <- read_csv(
@@ -382,11 +386,8 @@ OGlcNAc_protein_norm_Jurkat <- read_csv(
   paste0(source_file_path, 'normalization/OGlcNAc_protein_norm_Jurkat.csv')
 )
 
-# Create output directory
-dir.create(paste0(figure_file_path, "Figure4"), showWarnings = FALSE)
-
-# Define proteins of interest: HYOU1, ARNT, NRBP1
-proteins_of_interest <- c("Q9Y4L1", "P27540", "Q9UHY1")
+# Define proteins of interest: PHGDH, CREB1, DDX17
+proteins_of_interest <- c("O43175", "P16220", "Q92841")
 
 # Function to extract and calculate fold changes for a cell type
 calculate_fc <- function(norm_data, cell_name, proteins) {
@@ -417,22 +418,25 @@ fc_Jurkat <- calculate_fc(OGlcNAc_protein_norm_Jurkat, "Jurkat", proteins_of_int
 fc_combined <- bind_rows(fc_HEK293T, fc_HepG2, fc_Jurkat) |>
   mutate(
     cell = factor(cell, levels = c("HEK293T", "HepG2", "Jurkat")),
-    Gene = factor(Gene)
+    Gene = factor(Gene, levels = c("PHGDH", "CREB1", "DDX17"))
   )
 
 # Check data
 cat("\nFold change data for selected proteins:\n")
 print(fc_combined)
 
-# Create dot plot
+# Check range of log2FC values
+cat("\nlog2FC range by gene:\n")
+fc_combined |> group_by(Gene) |> summarise(min = min(log2FC, na.rm = TRUE), max = max(log2FC, na.rm = TRUE)) |> print()
+
+# Create dot plot with free y-axis scales for each facet
 figure4D <- fc_combined |>
   ggplot(aes(x = cell, y = log2FC, color = cell)) +
   geom_hline(yintercept = 0, color = "black", linewidth = 0.5) +
   geom_hline(yintercept = 0.5, color = "black", linetype = "dashed", linewidth = 0.5) +
-  geom_hline(yintercept = -0.5, color = "black", linetype = "dashed", linewidth = 0.5) +
   geom_point(size = 2, position = position_jitter(width = 0.1, seed = 42)) +
   scale_color_manual(values = colors_cell) +
-  facet_wrap(~ Gene, nrow = 1) +
+  facet_wrap(~ Gene, nrow = 1, scales = "free") +
   labs(x = "", y = expression(log[2]*"(Tuni/Ctrl)")) +
   theme_classic() +
   theme(
@@ -451,6 +455,103 @@ ggsave(
 )
 
 cat("\nFigure 4D saved to:", figure_file_path, "Figure4/Figure4D.pdf\n")
+
+# =============================================================================
+# Figure 4E - Jurkat Example Proteins Dot Plot (Self-contained)
+# =============================================================================
+# Dot plot showing log2(Tuni/Ctrl) for selected Jurkat proteins across cell types
+# Proteins: NFATC2 (Q13469), CTTN (Q14247), SEC31A (O94979)
+# Uses free y-axis scales for each facet to accommodate different fold change ranges
+# Run this section independently to regenerate Figure 4E
+
+library(tidyverse)
+
+# Source data paths and colors
+source('data_source.R')
+
+# Create output directory
+dir.create(paste0(figure_file_path, "Figure4"), showWarnings = FALSE)
+
+# Load normalized O-GlcNAc protein data
+OGlcNAc_protein_norm_HEK293T <- read_csv(
+  paste0(source_file_path, 'normalization/OGlcNAc_protein_norm_HEK293T.csv')
+)
+OGlcNAc_protein_norm_HepG2 <- read_csv(
+  paste0(source_file_path, 'normalization/OGlcNAc_protein_norm_HepG2.csv')
+)
+OGlcNAc_protein_norm_Jurkat <- read_csv(
+  paste0(source_file_path, 'normalization/OGlcNAc_protein_norm_Jurkat.csv')
+)
+
+# Define proteins of interest: NFATC2, CTTN, SEC31A
+proteins_of_interest_4E <- c("Q13469", "Q14247", "O94979")
+
+# Function to extract and calculate fold changes for a cell type
+calculate_fc_4E <- function(norm_data, cell_name, proteins) {
+  norm_data |>
+    filter(Protein.ID %in% proteins) |>
+    dplyr::select(Protein.ID, Gene,
+                  Intensity.Tuni_1_sl_tmm, Intensity.Tuni_2_sl_tmm, Intensity.Tuni_3_sl_tmm,
+                  Intensity.Ctrl_4_sl_tmm, Intensity.Ctrl_5_sl_tmm, Intensity.Ctrl_6_sl_tmm) |>
+    rowwise() |>
+    mutate(
+      mean_Ctrl = mean(c(Intensity.Ctrl_4_sl_tmm, Intensity.Ctrl_5_sl_tmm, Intensity.Ctrl_6_sl_tmm), na.rm = TRUE),
+      log2FC_rep1 = log2(Intensity.Tuni_1_sl_tmm / mean_Ctrl),
+      log2FC_rep2 = log2(Intensity.Tuni_2_sl_tmm / mean_Ctrl),
+      log2FC_rep3 = log2(Intensity.Tuni_3_sl_tmm / mean_Ctrl)
+    ) |>
+    ungroup() |>
+    dplyr::select(Protein.ID, Gene, log2FC_rep1, log2FC_rep2, log2FC_rep3) |>
+    pivot_longer(cols = starts_with("log2FC"), names_to = "replicate", values_to = "log2FC") |>
+    mutate(cell = cell_name)
+}
+
+# Calculate fold changes for each cell type
+fc_HEK293T_4E <- calculate_fc_4E(OGlcNAc_protein_norm_HEK293T, "HEK293T", proteins_of_interest_4E)
+fc_HepG2_4E <- calculate_fc_4E(OGlcNAc_protein_norm_HepG2, "HepG2", proteins_of_interest_4E)
+fc_Jurkat_4E <- calculate_fc_4E(OGlcNAc_protein_norm_Jurkat, "Jurkat", proteins_of_interest_4E)
+
+# Combine all data
+fc_combined_4E <- bind_rows(fc_HEK293T_4E, fc_HepG2_4E, fc_Jurkat_4E) |>
+  mutate(
+    cell = factor(cell, levels = c("HEK293T", "HepG2", "Jurkat")),
+    Gene = factor(Gene, levels = c("NFATC2", "CTTN", "SEC31A"))
+  )
+
+# Check data
+cat("\nFold change data for selected Jurkat proteins:\n")
+print(fc_combined_4E)
+
+# Check range of log2FC values
+cat("\nlog2FC range by gene:\n")
+fc_combined_4E |> group_by(Gene) |> summarise(min = min(log2FC, na.rm = TRUE), max = max(log2FC, na.rm = TRUE)) |> print()
+
+# Create dot plot with free y-axis scales for each facet
+figure4E <- fc_combined_4E |>
+  ggplot(aes(x = cell, y = log2FC, color = cell)) +
+  geom_hline(yintercept = 0, color = "black", linewidth = 0.5) +
+  geom_hline(yintercept = 0.5, color = "black", linetype = "dashed", linewidth = 0.5) +
+  geom_point(size = 2, position = position_jitter(width = 0.1, seed = 42)) +
+  scale_color_manual(values = colors_cell) +
+  facet_wrap(~ Gene, nrow = 1, scales = "free") +
+  labs(x = "", y = expression(log[2]*"(Tuni/Ctrl)")) +
+  theme_classic() +
+  theme(
+    axis.title.y = element_text(size = 9),
+    axis.text.x = element_text(color = "black", size = 9, angle = 30, hjust = 1),
+    axis.text.y = element_text(color = "black", size = 9),
+    strip.text = element_text(size = 9, face = "bold"),
+    strip.background = element_blank(),
+    legend.position = "none"
+  )
+
+ggsave(
+  filename = paste0(figure_file_path, 'Figure4/Figure4E.pdf'),
+  plot = figure4E,
+  height = 1.8, width = 3.5, units = 'in'
+)
+
+cat("\nFigure 4E saved to:", figure_file_path, "Figure4/Figure4E.pdf\n")
 
 # =============================================================================
 # Figure 4D Alternatives - Examine All Oppositely Regulated Proteins
