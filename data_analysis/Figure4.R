@@ -274,10 +274,10 @@ dev.off()
 cat("\nFigure 4A saved to:", figure_file_path, "Figure4/\n")
 
 # =============================================================================
-# Figure 4B - Oppositely Regulated Proteins List
+# Data Preparation - Oppositely Regulated Proteins List
 # =============================================================================
 # Extract proteins that are significantly upregulated in one cell type
-# but significantly downregulated in another cell type
+# but significantly downregulated in another cell type (used for Figure 4D)
 
 # Get up and down regulated proteins for each cell type
 up_HEK293T <- OGlcNAc_protein_DE_HEK293T |> filter(logFC > 0.5, adj.P.Val < 0.05) |> dplyr::select(Protein.ID)
@@ -360,7 +360,7 @@ write_csv(oppositely_regulated_table, paste0(source_file_path, 'circular_heatmap
 cat("\nOppositely regulated proteins table saved to:", source_file_path, "circular_heatmap/oppositely_regulated_proteins.csv\n")
 
 # =============================================================================
-# Figure 4B - Dot Plot for Selected Oppositely Regulated Proteins
+# Figure 4D - Dot Plot for Selected Oppositely Regulated Proteins
 # =============================================================================
 # Dot plot showing log2(Tuni/Ctrl) for selected proteins across cell types
 # Proteins: Q9Y4L1 (HYOU1), P27540 (ARNT), Q9UHY1 (NRBP1)
@@ -425,7 +425,7 @@ cat("\nFold change data for selected proteins:\n")
 print(fc_combined)
 
 # Create dot plot
-figure4B <- fc_combined |>
+figure4D <- fc_combined |>
   ggplot(aes(x = cell, y = log2FC, color = cell)) +
   geom_hline(yintercept = 0, color = "black", linewidth = 0.5) +
   geom_hline(yintercept = 0.5, color = "black", linetype = "dashed", linewidth = 0.5) +
@@ -445,15 +445,15 @@ figure4B <- fc_combined |>
   )
 
 ggsave(
-  filename = paste0(figure_file_path, 'Figure4/Figure4B.pdf'),
-  plot = figure4B,
+  filename = paste0(figure_file_path, 'Figure4/Figure4D.pdf'),
+  plot = figure4D,
   height = 1.8, width = 3.5, units = 'in'
 )
 
-cat("\nFigure 4B saved to:", figure_file_path, "Figure4/Figure4B.pdf\n")
+cat("\nFigure 4D saved to:", figure_file_path, "Figure4/Figure4D.pdf\n")
 
 # =============================================================================
-# Figure 4B Alternatives - Examine All Oppositely Regulated Proteins
+# Figure 4D Alternatives - Examine All Oppositely Regulated Proteins
 # =============================================================================
 # Run this section to generate individual plots for each alternative protein
 # Examine the plots to find good replacements for the current examples
@@ -575,13 +575,225 @@ for (alt in alternatives) {
 
 cat("\n=== All alternative plots saved to:", figure_file_path, "Figure4/alternatives/ ===\n")
 cat("Review the plots and select 3 proteins to replace the current examples.\n")
-cat("Then update the 'proteins_of_interest' in the Figure 4B section.\n")
+cat("Then update the 'proteins_of_interest' in the Figure 4D section.\n")
 
 # =============================================================================
-# Figure 4C-4E - GO Enrichment Analysis for All Cell Types
+# Figure 4D Candidates - HEK293T Examples (Self-contained)
 # =============================================================================
-# Functional enrichment analysis for up and down regulated O-GlcNAc proteins
-# in HEK293T, HepG2, and Jurkat cells with gradient barplots
+# Generate individual plots for all 20 HEK293T candidates for manual review
+
+library(tidyverse)
+
+# Source data paths and colors
+source('data_source_DE.R')
+
+# Load normalized O-GlcNAc protein data
+OGlcNAc_protein_norm_HEK293T <- read_csv(
+  paste0(source_file_path, 'normalization/OGlcNAc_protein_norm_HEK293T.csv')
+)
+OGlcNAc_protein_norm_HepG2 <- read_csv(
+  paste0(source_file_path, 'normalization/OGlcNAc_protein_norm_HepG2.csv')
+)
+OGlcNAc_protein_norm_Jurkat <- read_csv(
+  paste0(source_file_path, 'normalization/OGlcNAc_protein_norm_Jurkat.csv')
+)
+
+# Create output directory for HEK293T candidates
+dir.create(paste0(figure_file_path, "Figure4/Figure4D_candidates"), showWarnings = FALSE)
+
+# Load HEK293T candidates from CSV
+HEK293T_candidates <- read_csv(
+  paste0(figure_file_path, 'Figure4/HEK293T_OGlcNAc_candidates_20_literature.csv')
+)
+
+cat("\nHEK293T candidates loaded:", nrow(HEK293T_candidates), "proteins\n")
+print(HEK293T_candidates |> dplyr::select(Gene, Protein_ID, logFC))
+
+# Function to extract and calculate fold changes for a cell type
+calculate_fc_4D <- function(norm_data, cell_name, proteins) {
+  norm_data |>
+    filter(Protein.ID %in% proteins) |>
+    dplyr::select(Protein.ID, Gene,
+                  Intensity.Tuni_1_sl_tmm, Intensity.Tuni_2_sl_tmm, Intensity.Tuni_3_sl_tmm,
+                  Intensity.Ctrl_4_sl_tmm, Intensity.Ctrl_5_sl_tmm, Intensity.Ctrl_6_sl_tmm) |>
+    rowwise() |>
+    mutate(
+      mean_Ctrl = mean(c(Intensity.Ctrl_4_sl_tmm, Intensity.Ctrl_5_sl_tmm, Intensity.Ctrl_6_sl_tmm), na.rm = TRUE),
+      log2FC_rep1 = log2(Intensity.Tuni_1_sl_tmm / mean_Ctrl),
+      log2FC_rep2 = log2(Intensity.Tuni_2_sl_tmm / mean_Ctrl),
+      log2FC_rep3 = log2(Intensity.Tuni_3_sl_tmm / mean_Ctrl)
+    ) |>
+    ungroup() |>
+    dplyr::select(Protein.ID, Gene, log2FC_rep1, log2FC_rep2, log2FC_rep3) |>
+    pivot_longer(cols = starts_with("log2FC"), names_to = "replicate", values_to = "log2FC") |>
+    mutate(cell = cell_name)
+}
+
+# Function to create and save individual protein plot for HEK293T candidates
+create_HEK293T_candidate_plot <- function(protein_id, gene_name) {
+  fc_HEK293T <- calculate_fc_4D(OGlcNAc_protein_norm_HEK293T, "HEK293T", protein_id)
+  fc_HepG2 <- calculate_fc_4D(OGlcNAc_protein_norm_HepG2, "HepG2", protein_id)
+  fc_Jurkat <- calculate_fc_4D(OGlcNAc_protein_norm_Jurkat, "Jurkat", protein_id)
+
+  fc_combined <- bind_rows(fc_HEK293T, fc_HepG2, fc_Jurkat) |>
+    mutate(cell = factor(cell, levels = c("HEK293T", "HepG2", "Jurkat"))) |>
+    filter(!is.na(log2FC))
+
+  if (nrow(fc_combined) == 0) {
+    cat("No data for", gene_name, "(", protein_id, ")\n")
+    return(NULL)
+  }
+
+  p <- fc_combined |>
+    ggplot(aes(x = cell, y = log2FC, color = cell)) +
+    geom_hline(yintercept = 0, color = "black", linewidth = 0.5) +
+    geom_hline(yintercept = 0.5, color = "black", linetype = "dashed", linewidth = 0.5) +
+    geom_hline(yintercept = -0.5, color = "black", linetype = "dashed", linewidth = 0.5) +
+    geom_point(size = 3, position = position_jitter(width = 0.1, seed = 42)) +
+    scale_color_manual(values = colors_cell) +
+    labs(x = "", y = expression(log[2]*"(Tuni/Ctrl)"),
+         title = paste0(gene_name, " (", protein_id, ")")) +
+    theme_classic() +
+    theme(
+      plot.title = element_text(size = 10, face = "bold"),
+      axis.title.y = element_text(size = 9),
+      axis.text.x = element_text(color = "black", size = 9, angle = 30, hjust = 1),
+      axis.text.y = element_text(color = "black", size = 9),
+      legend.position = "none"
+    )
+
+  ggsave(
+    filename = paste0(figure_file_path, 'Figure4/Figure4D_candidates/', gene_name, '_', protein_id, '.pdf'),
+    plot = p,
+    height = 2.5, width = 2, units = 'in'
+  )
+
+  cat("Saved:", gene_name, "(", protein_id, ")\n")
+  return(p)
+}
+
+# Generate all HEK293T candidate plots
+cat("\n=== Generating HEK293T candidate plots for Figure 4D ===\n")
+for (i in 1:nrow(HEK293T_candidates)) {
+  create_HEK293T_candidate_plot(
+    HEK293T_candidates$Protein_ID[i],
+    HEK293T_candidates$Gene[i]
+  )
+}
+
+cat("\n=== All HEK293T candidate plots saved to:", figure_file_path, "Figure4/Figure4D_candidates/ ===\n")
+
+# =============================================================================
+# Figure 4E Candidates - Jurkat Examples (Self-contained)
+# =============================================================================
+# Generate individual plots for all 20 Jurkat candidates for manual review
+
+library(tidyverse)
+
+# Source data paths and colors
+source('data_source_DE.R')
+
+# Load normalized O-GlcNAc protein data
+OGlcNAc_protein_norm_HEK293T <- read_csv(
+  paste0(source_file_path, 'normalization/OGlcNAc_protein_norm_HEK293T.csv')
+)
+OGlcNAc_protein_norm_HepG2 <- read_csv(
+  paste0(source_file_path, 'normalization/OGlcNAc_protein_norm_HepG2.csv')
+)
+OGlcNAc_protein_norm_Jurkat <- read_csv(
+  paste0(source_file_path, 'normalization/OGlcNAc_protein_norm_Jurkat.csv')
+)
+
+# Create output directory for Jurkat candidates
+dir.create(paste0(figure_file_path, "Figure4/Figure4E_candidates"), showWarnings = FALSE)
+
+# Load Jurkat candidates from CSV
+Jurkat_candidates <- read_csv(
+  paste0(figure_file_path, 'Figure4/Jurkat_OGlcNAc_candidates_20_literature.csv')
+)
+
+cat("\nJurkat candidates loaded:", nrow(Jurkat_candidates), "proteins\n")
+print(Jurkat_candidates |> dplyr::select(Gene, Protein_ID, logFC))
+
+# Function to extract and calculate fold changes for a cell type
+calculate_fc_4E <- function(norm_data, cell_name, proteins) {
+  norm_data |>
+    filter(Protein.ID %in% proteins) |>
+    dplyr::select(Protein.ID, Gene,
+                  Intensity.Tuni_1_sl_tmm, Intensity.Tuni_2_sl_tmm, Intensity.Tuni_3_sl_tmm,
+                  Intensity.Ctrl_4_sl_tmm, Intensity.Ctrl_5_sl_tmm, Intensity.Ctrl_6_sl_tmm) |>
+    rowwise() |>
+    mutate(
+      mean_Ctrl = mean(c(Intensity.Ctrl_4_sl_tmm, Intensity.Ctrl_5_sl_tmm, Intensity.Ctrl_6_sl_tmm), na.rm = TRUE),
+      log2FC_rep1 = log2(Intensity.Tuni_1_sl_tmm / mean_Ctrl),
+      log2FC_rep2 = log2(Intensity.Tuni_2_sl_tmm / mean_Ctrl),
+      log2FC_rep3 = log2(Intensity.Tuni_3_sl_tmm / mean_Ctrl)
+    ) |>
+    ungroup() |>
+    dplyr::select(Protein.ID, Gene, log2FC_rep1, log2FC_rep2, log2FC_rep3) |>
+    pivot_longer(cols = starts_with("log2FC"), names_to = "replicate", values_to = "log2FC") |>
+    mutate(cell = cell_name)
+}
+
+# Function to create and save individual protein plot for Jurkat candidates
+create_Jurkat_candidate_plot <- function(protein_id, gene_name) {
+  fc_HEK293T <- calculate_fc_4E(OGlcNAc_protein_norm_HEK293T, "HEK293T", protein_id)
+  fc_HepG2 <- calculate_fc_4E(OGlcNAc_protein_norm_HepG2, "HepG2", protein_id)
+  fc_Jurkat <- calculate_fc_4E(OGlcNAc_protein_norm_Jurkat, "Jurkat", protein_id)
+
+  fc_combined <- bind_rows(fc_HEK293T, fc_HepG2, fc_Jurkat) |>
+    mutate(cell = factor(cell, levels = c("HEK293T", "HepG2", "Jurkat"))) |>
+    filter(!is.na(log2FC))
+
+  if (nrow(fc_combined) == 0) {
+    cat("No data for", gene_name, "(", protein_id, ")\n")
+    return(NULL)
+  }
+
+  p <- fc_combined |>
+    ggplot(aes(x = cell, y = log2FC, color = cell)) +
+    geom_hline(yintercept = 0, color = "black", linewidth = 0.5) +
+    geom_hline(yintercept = 0.5, color = "black", linetype = "dashed", linewidth = 0.5) +
+    geom_hline(yintercept = -0.5, color = "black", linetype = "dashed", linewidth = 0.5) +
+    geom_point(size = 3, position = position_jitter(width = 0.1, seed = 42)) +
+    scale_color_manual(values = colors_cell) +
+    labs(x = "", y = expression(log[2]*"(Tuni/Ctrl)"),
+         title = paste0(gene_name, " (", protein_id, ")")) +
+    theme_classic() +
+    theme(
+      plot.title = element_text(size = 10, face = "bold"),
+      axis.title.y = element_text(size = 9),
+      axis.text.x = element_text(color = "black", size = 9, angle = 30, hjust = 1),
+      axis.text.y = element_text(color = "black", size = 9),
+      legend.position = "none"
+    )
+
+  ggsave(
+    filename = paste0(figure_file_path, 'Figure4/Figure4E_candidates/', gene_name, '_', protein_id, '.pdf'),
+    plot = p,
+    height = 2.5, width = 2, units = 'in'
+  )
+
+  cat("Saved:", gene_name, "(", protein_id, ")\n")
+  return(p)
+}
+
+# Generate all Jurkat candidate plots
+cat("\n=== Generating Jurkat candidate plots for Figure 4E ===\n")
+for (i in 1:nrow(Jurkat_candidates)) {
+  create_Jurkat_candidate_plot(
+    Jurkat_candidates$Protein_ID[i],
+    Jurkat_candidates$Gene[i]
+  )
+}
+
+cat("\n=== All Jurkat candidate plots saved to:", figure_file_path, "Figure4/Figure4E_candidates/ ===\n")
+
+# =============================================================================
+# GO Enrichment Data Preparation (Run GO Analysis & Preview Results)
+# =============================================================================
+# This section runs GO enrichment analysis and previews results
+# Figure 4B and 4C sections below are self-contained and can be run independently
 
 # Load required libraries
 library(tidyverse)
@@ -839,30 +1051,168 @@ OGlcNAc_down_Jurkat_GO_result |>
   head(10) |>
   print()
 
-# Figure 4C - HEK293T Barplot with gradient
-figure4C_data <- OGlcNAc_up_HEK293T_GO_result |>
+# =============================================================================
+# Figure 4B - HEK293T GO Enrichment Barplot (Self-contained)
+# =============================================================================
+# Run this section independently to regenerate Figure 4B
+
+library(tidyverse)
+
+# Source data paths and colors
+source('data_source.R')
+
+# Create output directory
+dir.create(paste0(figure_file_path, "Figure4"), showWarnings = FALSE)
+
+# Define lighter pastel color for HEK293T gradient bars
+color_HEK293T_light <- "#7DCDE5"
+
+# Function to create gradient bar data
+create_gradient_data_4B <- function(df, n_segments = 50) {
+  df <- df |> mutate(y_num = as.numeric(fct_reorder(Description, log_pvalue)))
+
+  gradient_df <- do.call(rbind, lapply(1:nrow(df), function(i) {
+    row <- df[i, ]
+    segments <- data.frame(
+      Description = row$Description,
+      y_num = row$y_num,
+      xmin = seq(0, row$log_pvalue, length.out = n_segments + 1)[-(n_segments + 1)],
+      xmax = seq(0, row$log_pvalue, length.out = n_segments + 1)[-1],
+      segment = 1:n_segments
+    )
+    segments$alpha_val <- seq(0.9, 0.3, length.out = n_segments)
+    segments
+  }))
+  gradient_df
+}
+
+# Load HEK293T GO enrichment results
+OGlcNAc_up_HEK293T_GO_result <- read_csv(
+  paste0(source_file_path, 'enrichment/OGlcNAc_up_HEK293T_GO.csv')
+)
+
+# Figure 4B - HEK293T Barplot with gradient
+figure4B_data <- OGlcNAc_up_HEK293T_GO_result |>
   filter(
     Description %in% c(
       'ribonucleotide metabolic process',
-      'ribose phosphate metabolic process',
-      'protein folding chaperone',
-      'cytosol',
-      'nucleotide binding'
+      'response to retinoic acid',
+      'ribosome biogenesis',
+      'forebrain generation of neurons',
+      'protein folding'
     )
   ) |>
   mutate(
     Description = case_when(
       Description == "ribonucleotide metabolic process" ~ "Ribonucleotide metabolism",
-      Description == "ribose phosphate metabolic process" ~ "Ribose phosphate metabolism",
-      Description == "protein folding chaperone" ~ "Protein folding chaperone",
-      Description == "cytosol" ~ "Cytosol",
-      Description == "nucleotide binding" ~ "Nucleotide binding",
+      Description == "response to retinoic acid" ~ "Response to retinoic acid",
+      Description == "ribosome biogenesis" ~ "Ribosome biogenesis",
+      Description == "forebrain generation of neurons" ~ "Forebrain neuron generation",
+      Description == "protein folding" ~ "Protein folding",
       TRUE ~ Description
     ),
     log_pvalue = -log10(pvalue)
   )
 
-figure4C_gradient <- create_gradient_data(figure4C_data)
+figure4B_gradient <- create_gradient_data_4B(figure4B_data)
+
+figure4B <- ggplot() +
+  geom_rect(
+    data = figure4B_gradient,
+    aes(xmin = xmin, xmax = xmax,
+        ymin = y_num - 0.35, ymax = y_num + 0.35,
+        alpha = alpha_val),
+    fill = color_HEK293T_light
+  ) +
+  geom_text(
+    data = figure4B_data |> mutate(y_num = as.numeric(fct_reorder(Description, log_pvalue))),
+    aes(label = Description, x = 0.05, y = y_num),
+    hjust = 0, size = 2.8, color = "black"
+  ) +
+  scale_alpha_identity() +
+  scale_x_continuous(expand = expansion(mult = c(0, 0.1))) +
+  scale_y_continuous(breaks = 1:nrow(figure4B_data), labels = NULL) +
+  labs(x = expression(-log[10]*"("*paste(italic(P), " Value")*")"), y = "") +
+  theme_classic() +
+  theme(
+    axis.title.x = element_text(size = 9),
+    axis.text.x = element_text(color = "black", size = 9),
+    axis.text.y = element_blank(),
+    axis.ticks.y = element_blank()
+  )
+
+ggsave(
+  filename = paste0(figure_file_path, 'Figure4/Figure4B.pdf'),
+  plot = figure4B,
+  height = 1.5, width = 2, units = 'in'
+)
+
+cat("\nFigure 4B saved to:", figure_file_path, "Figure4/Figure4B.pdf\n")
+
+# =============================================================================
+# Figure 4C - Jurkat GO Enrichment Barplot (Self-contained)
+# =============================================================================
+# Run this section independently to regenerate Figure 4C
+
+library(tidyverse)
+
+# Source data paths and colors
+source('data_source.R')
+
+# Create output directory
+dir.create(paste0(figure_file_path, "Figure4"), showWarnings = FALSE)
+
+# Define lighter pastel color for Jurkat gradient bars
+color_Jurkat_light <- "#4DC4B0"
+
+# Function to create gradient bar data
+create_gradient_data_4C <- function(df, n_segments = 50) {
+  df <- df |> mutate(y_num = as.numeric(fct_reorder(Description, log_pvalue)))
+
+  gradient_df <- do.call(rbind, lapply(1:nrow(df), function(i) {
+    row <- df[i, ]
+    segments <- data.frame(
+      Description = row$Description,
+      y_num = row$y_num,
+      xmin = seq(0, row$log_pvalue, length.out = n_segments + 1)[-(n_segments + 1)],
+      xmax = seq(0, row$log_pvalue, length.out = n_segments + 1)[-1],
+      segment = 1:n_segments
+    )
+    segments$alpha_val <- seq(0.9, 0.3, length.out = n_segments)
+    segments
+  }))
+  gradient_df
+}
+
+# Load Jurkat GO enrichment results (upregulated)
+OGlcNAc_up_Jurkat_GO_result <- read_csv(
+  paste0(source_file_path, 'enrichment/OGlcNAc_up_Jurkat_GO.csv')
+)
+
+# Figure 4C - Jurkat Barplot with gradient
+figure4C_data <- OGlcNAc_up_Jurkat_GO_result |>
+  filter(
+    Description %in% c(
+      'regulation of leukocyte proliferation',
+      'cell activation',
+      'lymphocyte activation',
+      'leukocyte migration',
+      'regulation of T cell activation'
+    )
+  ) |>
+  mutate(
+    Description = case_when(
+      Description == "regulation of leukocyte proliferation" ~ "Leukocyte proliferation",
+      Description == "cell activation" ~ "Cell activation",
+      Description == "lymphocyte activation" ~ "Lymphocyte activation",
+      Description == "leukocyte migration" ~ "Leukocyte migration",
+      Description == "regulation of T cell activation" ~ "T cell activation",
+      TRUE ~ Description
+    ),
+    log_pvalue = -log10(pvalue)
+  )
+
+figure4C_gradient <- create_gradient_data_4C(figure4C_data)
 
 figure4C <- ggplot() +
   geom_rect(
@@ -870,7 +1220,7 @@ figure4C <- ggplot() +
     aes(xmin = xmin, xmax = xmax,
         ymin = y_num - 0.35, ymax = y_num + 0.35,
         alpha = alpha_val),
-    fill = color_HEK293T_light
+    fill = color_Jurkat_light
   ) +
   geom_text(
     data = figure4C_data |> mutate(y_num = as.numeric(fct_reorder(Description, log_pvalue))),
@@ -895,124 +1245,4 @@ ggsave(
   height = 1.5, width = 2, units = 'in'
 )
 
-cat("\nFigure 4C saved\n")
-
-# Figure 4D - HepG2 Barplot with gradient
-figure4D_data <- OGlcNAc_down_HepG2_GO_result |>
-  filter(
-    Description %in% c(
-      'endoplasmic reticulum lumen',
-      'structural constituent of nuclear pore',
-      'endoplasmic reticulum',
-      'import into nucleus',
-      'RNA export from nucleus'
-    )
-  ) |>
-  mutate(
-    Description = case_when(
-      Description == "endoplasmic reticulum lumen" ~ "ER lumen",
-      Description == "structural constituent of nuclear pore" ~ "Nuclear pore constituent",
-      Description == "endoplasmic reticulum" ~ "ER",
-      Description == "import into nucleus" ~ "Nuclear import",
-      Description == "RNA export from nucleus" ~ "Nuclear RNA export",
-      TRUE ~ Description
-    ),
-    log_pvalue = -log10(pvalue)
-  )
-
-figure4D_gradient <- create_gradient_data(figure4D_data)
-
-figure4D <- ggplot() +
-  geom_rect(
-    data = figure4D_gradient,
-    aes(xmin = xmin, xmax = xmax,
-        ymin = y_num - 0.35, ymax = y_num + 0.35,
-        alpha = alpha_val),
-    fill = color_HepG2_light
-  ) +
-  geom_text(
-    data = figure4D_data |> mutate(y_num = as.numeric(fct_reorder(Description, log_pvalue))),
-    aes(label = Description, x = 0.05, y = y_num),
-    hjust = 0, size = 2.8, color = "black"
-  ) +
-  scale_alpha_identity() +
-  scale_x_continuous(expand = expansion(mult = c(0, 0.1))) +
-  scale_y_continuous(breaks = 1:nrow(figure4D_data), labels = NULL) +
-  labs(x = expression(-log[10]*"("*paste(italic(P), " Value")*")"), y = "") +
-  theme_classic() +
-  theme(
-    axis.title.x = element_text(size = 9),
-    axis.text.x = element_text(color = "black", size = 9),
-    axis.text.y = element_blank(),
-    axis.ticks.y = element_blank()
-  )
-
-ggsave(
-  filename = paste0(figure_file_path, 'Figure4/Figure4D.pdf'),
-  plot = figure4D,
-  height = 1.5, width = 2, units = 'in'
-)
-
-cat("Figure 4D saved\n")
-
-# Figure 4E - Jurkat Barplot with gradient
-figure4E_data <- OGlcNAc_down_Jurkat_GO_result |>
-  filter(
-    Description %in% c(
-      'ERAD pathway',
-      'proteasomal protein catabolic process',
-      'response to endoplasmic reticulum stress',
-      'regulation of translational initiation',
-      'protein glycosylation'
-    )
-  ) |>
-  mutate(
-    Description = case_when(
-      Description == "ERAD pathway" ~ "ERAD pathway",
-      Description == "proteasomal protein catabolic process" ~ "Proteasomal catabolism",
-      Description == "response to endoplasmic reticulum stress" ~ "Response to ER stress",
-      Description == "regulation of translational initiation" ~ "Translational initiation",
-      Description == "protein glycosylation" ~ "Protein glycosylation",
-      TRUE ~ Description
-    ),
-    log_pvalue = -log10(pvalue)
-  )
-
-figure4E_gradient <- create_gradient_data(figure4E_data)
-
-figure4E <- ggplot() +
-  geom_rect(
-    data = figure4E_gradient,
-    aes(xmin = xmin, xmax = xmax,
-        ymin = y_num - 0.35, ymax = y_num + 0.35,
-        alpha = alpha_val),
-    fill = color_Jurkat_light
-  ) +
-  geom_text(
-    data = figure4E_data |> mutate(y_num = as.numeric(fct_reorder(Description, log_pvalue))),
-    aes(label = Description, x = 0.05, y = y_num),
-    hjust = 0, size = 2.8, color = "black"
-  ) +
-  scale_alpha_identity() +
-  scale_x_continuous(expand = expansion(mult = c(0, 0.1))) +
-  scale_y_continuous(breaks = 1:nrow(figure4E_data), labels = NULL) +
-  labs(x = expression(-log[10]*"("*paste(italic(P), " Value")*")"), y = "") +
-  theme_classic() +
-  theme(
-    axis.title.x = element_text(size = 9),
-    axis.text.x = element_text(color = "black", size = 9),
-    axis.text.y = element_blank(),
-    axis.ticks.y = element_blank()
-  )
-
-ggsave(
-  filename = paste0(figure_file_path, 'Figure4/Figure4E.pdf'),
-  plot = figure4E,
-  height = 1.5, width = 2, units = 'in'
-)
-
-cat("Figure 4E saved\n")
-
-cat("\n=== Figure 4C-4E: GO enrichment analyses complete ===\n")
-cat("Enrichment results saved to:", source_file_path, "enrichment/\n")
-cat("Figures saved to:", figure_file_path, "Figure4/\n")
+cat("\nFigure 4C saved to:", figure_file_path, "Figure4/Figure4C.pdf\n")
