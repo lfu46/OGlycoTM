@@ -136,6 +136,29 @@ python spectrum_annotator.py
 # - Uses calibrated.mzML files for accurate mass matching
 ```
 
+### False Match Rate Calculation
+
+The spectrum annotator includes a false match rate (FMR) calculation based on the spectrum shifting method from Schulte et al. (Anal. Chem. 2025). This estimates the fraction of spurious matches:
+
+```python
+from fragment_calculator import calculate_false_match_rate
+
+# Calculate FMR for a spectrum
+fmr = calculate_false_match_rate(
+    theoretical_ions,   # List of TheoreticalIon objects
+    exp_mz,            # Experimental m/z array
+    exp_intensity,     # Experimental intensity array
+    tolerance_ppm=20.0,
+    shift_range=25.0,  # Shift spectrum by π ± 25 Th
+    shift_step=1.0     # 1 Th increments
+)
+
+print(f"FMR (peaks): {fmr.fmr_peaks*100:.1f}%")
+print(f"FMR (intensity): {fmr.fmr_intensity*100:.1f}%")
+```
+
+The method shifts the spectrum by π ± 25 Th (π offset prevents isotope pattern matches) and calculates what fraction of matches would occur by chance. Low FMR (<10%) indicates high-quality annotations.
+
 Spectrum data locations:
 - mzML files: `/Volumes/cos-lab-rwu60/Longping/OGlycoTM_Final_Version/OGlycoTM_{cell_type}/`
 - EThcD ranked files: `data_source/point_to_point_response/OGlcNAc_Level1_{cell_type}_EThcD_ranked.csv`
@@ -170,9 +193,37 @@ pandoc "input.md" -o "output.pdf" --pdf-engine=xelatex \
   --toc -V colorlinks=true -V linkcolor=blue -V urlcolor=blue
 ```
 
-If Unicode subscripts (₁₀) cause issues, pipe through sed first:
+If Unicode subscripts/superscripts cause issues (Times New Roman doesn't support them), pipe through sed first:
 ```bash
-sed 's/log₁₀/log10/g' "input.md" | pandoc -o "output.pdf" --pdf-engine=xelatex \
+sed -e 's/⁻/-/g' -e 's/₀/0/g' -e 's/₁/1/g' -e 's/₂/2/g' -e 's/₃/3/g' -e 's/₄/4/g' -e 's/₅/5/g' -e 's/₆/6/g' -e 's/₇/7/g' -e 's/₈/8/g' -e 's/₉/9/g' "input.md" | \
+  pandoc -o "output.pdf" --pdf-engine=xelatex \
   -V geometry:margin=1in -V fontsize=11pt -V mainfont="Times New Roman" \
-  --toc -V colorlinks=true
+  --toc -V colorlinks=true -V linkcolor=blue -V urlcolor=blue
 ```
+
+## DOCX to PDF Conversion
+
+Convert Word documents to text-selectable PDF using pandoc:
+
+```bash
+pandoc "input.docx" -o "output.pdf" --pdf-engine=xelatex
+```
+
+Note: This produces text-selectable PDFs but may not preserve complex formatting (tables, images, custom styles) perfectly. For exact formatting preservation, use `docx2pdf` (`pip install docx2pdf`) which requires Microsoft Word or LibreOffice.
+
+## PDF to High-Resolution TIFF Conversion
+
+Convert PDF files to high-resolution TIFF (600 DPI) using ImageMagick:
+
+```bash
+# Single file
+magick -density 600 "input.pdf" -quality 100 "output.tiff"
+
+# Batch convert all PDFs in a folder
+for pdf in /path/to/folder/*.pdf; do
+  filename=$(basename "$pdf" .pdf)
+  magick -density 600 "$pdf" -quality 100 "/path/to/output/${filename}.tiff"
+done
+```
+
+Note: Requires ImageMagick (`brew install imagemagick`). 600 DPI TIFFs are large (~80-90 MB each) but publication-quality.
