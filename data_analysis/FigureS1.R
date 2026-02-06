@@ -5,6 +5,7 @@
 library(tidyverse)
 library(GGally)
 library(grid)
+library(devEMF)  # For EMF output
 
 # Source data paths and colors
 source('data_source.R')
@@ -121,6 +122,56 @@ popViewport()
 popViewport()
 dev.off()
 
+# Save as EMF format
+emf(paste0(figure_file_path, "FigureS1/FigureS1_reproducibility.emf"),
+    width = 6, height = 2)
+
+# Create layout with 3 columns
+pushViewport(viewport(layout = grid.layout(1, 3)))
+
+# Plot HEK293T in first column
+pushViewport(viewport(layout.pos.row = 1, layout.pos.col = 1))
+print(FigureS1A, newpage = FALSE)
+popViewport()
+
+# Plot HepG2 in second column
+pushViewport(viewport(layout.pos.row = 1, layout.pos.col = 2))
+print(FigureS1B, newpage = FALSE)
+popViewport()
+
+# Plot Jurkat in third column
+pushViewport(viewport(layout.pos.row = 1, layout.pos.col = 3))
+print(FigureS1C, newpage = FALSE)
+popViewport()
+
+popViewport()
+dev.off()
+
+# Save as TIFF format (600 DPI)
+tiff(paste0(figure_file_path, "FigureS1/FigureS1_reproducibility.tiff"),
+     width = 6, height = 2, units = "in", res = 600, compression = "lzw")
+
+# Create layout with 3 columns
+pushViewport(viewport(layout = grid.layout(1, 3)))
+
+# Plot HEK293T in first column
+pushViewport(viewport(layout.pos.row = 1, layout.pos.col = 1))
+print(FigureS1A, newpage = FALSE)
+popViewport()
+
+# Plot HepG2 in second column
+pushViewport(viewport(layout.pos.row = 1, layout.pos.col = 2))
+print(FigureS1B, newpage = FALSE)
+popViewport()
+
+# Plot Jurkat in third column
+pushViewport(viewport(layout.pos.row = 1, layout.pos.col = 3))
+print(FigureS1C, newpage = FALSE)
+popViewport()
+
+popViewport()
+dev.off()
+
 # Display in RStudio
 grid.newpage()
 pushViewport(viewport(layout = grid.layout(1, 3)))
@@ -135,4 +186,7 @@ print(FigureS1C, newpage = FALSE)
 popViewport()
 popViewport()
 
-cat("\nFigure S1 (Reproducibility) saved to:", figure_file_path, "FigureS1/\n")
+cat("\nFigure S1 (Reproducibility) saved to:", figure_file_path, "FigureS1/")
+cat("\n  - FigureS1_reproducibility.pdf")
+cat("\n  - FigureS1_reproducibility.emf")
+cat("\n  - FigureS1_reproducibility.tiff\n")

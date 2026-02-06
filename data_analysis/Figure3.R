@@ -1,15 +1,16 @@
 # Figure 3: O-GlcNAc Differential Analysis Visualization
 
+
+# Figure 3A ---------------------------------------------------------------
+# Violin boxplot comparing O-GlcNAc protein logFC distribution across cell types
+# Statistical test: Kolmogorov-Smirnov test (compares distribution shapes)
+
 library(tidyverse)
 library(ggpubr)
 library(rstatix)
 
 # Source data paths, colors, and differential analysis results
 source('data_source_DE.R')
-
-# Figure 3A ---------------------------------------------------------------
-# Violin boxplot comparing O-GlcNAc protein logFC distribution across cell types
-# Statistical test: Kolmogorov-Smirnov test (compares distribution shapes)
 
 # Combine logFC results from all cell types
 OGlcNAc_protein_logFC_HEK293T <- OGlcNAc_protein_DE_HEK293T %>%
@@ -85,7 +86,7 @@ Figure3A <- OGlcNAc_protein_logFC_combined %>%
     data = OGlcNAc_protein_ks_test,
     label = "p.signif",
     tip.length = 0,
-    size = 3,
+    size = 5,
     y.position = c(1.5, 1.9, 1.7)
   ) +
   coord_cartesian(ylim = c(-2, 2.3)) +
@@ -104,7 +105,7 @@ print(Figure3A)
 ggsave(
   filename = paste0(figure_file_path, "Figure3/Figure3A.pdf"),
   plot = Figure3A,
-  width = 1.2, height = 1.5, units = "in"
+  width = 1.5, height = 2, units = "in"
 )
 
 cat("\nFigure 3A saved to:", figure_file_path, "Figure3/\n")
@@ -113,7 +114,11 @@ cat("\nFigure 3A saved to:", figure_file_path, "Figure3/\n")
 # Split violin plot comparing O-GlcNAc protein vs whole proteome abundance changes
 # Statistical test: Kolmogorov-Smirnov test
 
+library(tidyverse)
 library(introdataviz)
+
+# Source data paths, colors, and differential analysis results
+source('data_source_DE.R')
 
 # Extract information for HEK293T
 OGlcNAc_WP_distribution_HEK293T <- OGlcNAc_protein_DE_HEK293T |>
@@ -186,6 +191,7 @@ get_signif_label <- function(p) {
 }
 
 # Create KS test label dataframe for annotation
+# Stagger y positions to avoid overlapping labels
 ks_test_label <- tibble(
   Cell = c("HEK293T", "HepG2", "Jurkat"),
   p_signif = c(
@@ -193,7 +199,7 @@ ks_test_label <- tibble(
     get_signif_label(ks_HepG2$p.value),
     get_signif_label(ks_Jurkat$p.value)
   ),
-  logFC = 1.5
+  logFC = c(1.8, 1.5, 1.2)
 ) |>
   mutate(Cell = factor(Cell, levels = c("HEK293T", "HepG2", "Jurkat")))
 
@@ -216,7 +222,7 @@ Figure3B <- Figure3B_data |>
   ggplot(aes(x = Cell, y = logFC, fill = fill_group)) +
   geom_split_violin(color = "transparent") +
   geom_text(data = ks_test_label, aes(x = Cell, y = logFC, label = p_signif),
-            inherit.aes = FALSE, size = 3) +
+            inherit.aes = FALSE, size = 5) +
   scale_fill_manual(values = c(
     "OGlcNAc_HEK293T" = unname(colors_cell["HEK293T"]),
     "OGlcNAc_HepG2" = unname(colors_cell["HepG2"]),
@@ -240,7 +246,7 @@ print(Figure3B)
 ggsave(
   filename = paste0(figure_file_path, "Figure3/Figure3B.pdf"),
   plot = Figure3B,
-  width = 1.2, height = 1.5, units = "in"
+  width = 1.5, height = 2, units = "in"
 )
 
 cat("\nFigure 3B saved to:", figure_file_path, "Figure3/\n")
@@ -364,7 +370,7 @@ Figure3C <- ggplot() +
     panel.grid.minor = element_line(linewidth = 0.1, color = "gray"),
     axis.title = element_text(size = 9),
     axis.text = element_text(size = 9, color = "black"),
-    legend.position = "top",
+    legend.position = "bottom",
     legend.text = element_text(size = 7),
     legend.key.size = unit(0.2, "cm")
   )
@@ -374,7 +380,7 @@ print(Figure3C)
 ggsave(
   filename = paste0(figure_file_path, "Figure3/Figure3C.pdf"),
   plot = Figure3C,
-  width = 1.5, height = 1.8, units = "in"
+  width = 1.8, height = 2.2, units = "in"
 )
 
 cat("\nFigure 3C saved to:", figure_file_path, "Figure3/\n")

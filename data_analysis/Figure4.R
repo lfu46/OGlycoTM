@@ -274,90 +274,212 @@ dev.off()
 cat("\nFigure 4A saved to:", figure_file_path, "Figure4/\n")
 
 # =============================================================================
-# Data Preparation - Oppositely Regulated Proteins List
+# Figure 4B - Jurkat GO Enrichment Barplot (Self-contained)
 # =============================================================================
-# Extract proteins that are significantly upregulated in one cell type
-# but significantly downregulated in another cell type (used for Figure 4D)
+# Run this section independently to regenerate Figure 4B
 
-# Get up and down regulated proteins for each cell type
-up_HEK293T <- OGlcNAc_protein_DE_HEK293T |> filter(logFC > 0.5, adj.P.Val < 0.05) |> dplyr::select(Protein.ID)
-up_HepG2 <- OGlcNAc_protein_DE_HepG2 |> filter(logFC > 0.5, adj.P.Val < 0.05) |> dplyr::select(Protein.ID)
-up_Jurkat <- OGlcNAc_protein_DE_Jurkat |> filter(logFC > 0.5, adj.P.Val < 0.05) |> dplyr::select(Protein.ID)
+library(tidyverse)
 
-down_HEK293T <- OGlcNAc_protein_DE_HEK293T |> filter(logFC < -0.5, adj.P.Val < 0.05) |> dplyr::select(Protein.ID)
-down_HepG2 <- OGlcNAc_protein_DE_HepG2 |> filter(logFC < -0.5, adj.P.Val < 0.05) |> dplyr::select(Protein.ID)
-down_Jurkat <- OGlcNAc_protein_DE_Jurkat |> filter(logFC < -0.5, adj.P.Val < 0.05) |> dplyr::select(Protein.ID)
+# Source data paths and colors
+source('data_source.R')
 
-# Find all oppositely regulated proteins (union of all combinations)
-oppositely_regulated <- bind_rows(
-  # Down in HepG2, Up in HEK293T
-  inner_join(down_HepG2, up_HEK293T, by = "Protein.ID") |> mutate(pattern = "down_HepG2_up_HEK293T"),
-  # Down in HepG2, Up in Jurkat
-  inner_join(down_HepG2, up_Jurkat, by = "Protein.ID") |> mutate(pattern = "down_HepG2_up_Jurkat"),
-  # Down in HEK293T, Up in HepG2
-  inner_join(down_HEK293T, up_HepG2, by = "Protein.ID") |> mutate(pattern = "down_HEK293T_up_HepG2"),
-  # Down in HEK293T, Up in Jurkat
-  inner_join(down_HEK293T, up_Jurkat, by = "Protein.ID") |> mutate(pattern = "down_HEK293T_up_Jurkat"),
-  # Down in Jurkat, Up in HEK293T
-  inner_join(down_Jurkat, up_HEK293T, by = "Protein.ID") |> mutate(pattern = "down_Jurkat_up_HEK293T"),
-  # Down in Jurkat, Up in HepG2
-  inner_join(down_Jurkat, up_HepG2, by = "Protein.ID") |> mutate(pattern = "down_Jurkat_up_HepG2")
+# Create output directory
+dir.create(paste0(figure_file_path, "Figure4"), showWarnings = FALSE)
+
+# Define lighter pastel color for Jurkat gradient bars
+color_Jurkat_light <- "#4DC4B0"
+
+# Function to create gradient bar data
+create_gradient_data_4B <- function(df, n_segments = 50) {
+  df <- df |> mutate(y_num = as.numeric(fct_reorder(Description, log_pvalue)))
+
+  gradient_df <- do.call(rbind, lapply(1:nrow(df), function(i) {
+    row <- df[i, ]
+    segments <- data.frame(
+      Description = row$Description,
+      y_num = row$y_num,
+      xmin = seq(0, row$log_pvalue, length.out = n_segments + 1)[-(n_segments + 1)],
+      xmax = seq(0, row$log_pvalue, length.out = n_segments + 1)[-1],
+      segment = 1:n_segments
+    )
+    segments$alpha_val <- seq(0.9, 0.3, length.out = n_segments)
+    segments
+  }))
+  gradient_df
+}
+
+# Load Jurkat GO enrichment results (upregulated)
+OGlcNAc_up_Jurkat_GO_result <- read_csv(
+  paste0(source_file_path, 'enrichment/OGlcNAc_up_Jurkat_GO.csv')
 )
 
-# Get unique proteins
-unique_proteins <- unique(oppositely_regulated$Protein.ID)
-cat("\nTotal unique oppositely regulated proteins:", length(unique_proteins), "\n")
-
-# Create comprehensive table with fold changes from all cell types
-oppositely_regulated_table <- tibble(Protein.ID = unique_proteins) |>
-  left_join(
-    OGlcNAc_protein_DE_HEK293T |> dplyr::select(Protein.ID, logFC_HEK293T = logFC, adjPVal_HEK293T = adj.P.Val),
-    by = "Protein.ID"
-  ) |>
-  left_join(
-    OGlcNAc_protein_DE_HepG2 |> dplyr::select(Protein.ID, logFC_HepG2 = logFC, adjPVal_HepG2 = adj.P.Val),
-    by = "Protein.ID"
-  ) |>
-  left_join(
-    OGlcNAc_protein_DE_Jurkat |> dplyr::select(Protein.ID, logFC_Jurkat = logFC, adjPVal_Jurkat = adj.P.Val),
-    by = "Protein.ID"
-  )
-
-# Add regulation status for each cell type
-oppositely_regulated_table <- oppositely_regulated_table |>
-  mutate(
-    status_HEK293T = case_when(
-      logFC_HEK293T > 0.5 & adjPVal_HEK293T < 0.05 ~ "Up",
-      logFC_HEK293T < -0.5 & adjPVal_HEK293T < 0.05 ~ "Down",
-      TRUE ~ "NS"
-    ),
-    status_HepG2 = case_when(
-      logFC_HepG2 > 0.5 & adjPVal_HepG2 < 0.05 ~ "Up",
-      logFC_HepG2 < -0.5 & adjPVal_HepG2 < 0.05 ~ "Down",
-      TRUE ~ "NS"
-    ),
-    status_Jurkat = case_when(
-      logFC_Jurkat > 0.5 & adjPVal_Jurkat < 0.05 ~ "Up",
-      logFC_Jurkat < -0.5 & adjPVal_Jurkat < 0.05 ~ "Down",
-      TRUE ~ "NS"
+# Figure 4B - Jurkat Barplot with gradient
+figure4B_data <- OGlcNAc_up_Jurkat_GO_result |>
+  filter(
+    Description %in% c(
+      'regulation of leukocyte proliferation',
+      'cell activation',
+      'lymphocyte activation',
+      'leukocyte migration',
+      'regulation of T cell activation'
     )
   ) |>
-  arrange(Protein.ID)
+  mutate(
+    Description = case_when(
+      Description == "regulation of leukocyte proliferation" ~ "Leukocyte proliferation",
+      Description == "cell activation" ~ "Cell activation",
+      Description == "lymphocyte activation" ~ "Lymphocyte activation",
+      Description == "leukocyte migration" ~ "Leukocyte migration",
+      Description == "regulation of T cell activation" ~ "T cell activation",
+      TRUE ~ Description
+    ),
+    log_pvalue = -log10(pvalue)
+  )
 
-# Print summary
-cat("\nOppositely regulated proteins by pattern:\n")
-oppositely_regulated |>
-  group_by(pattern) |>
-  summarise(n = n(), .groups = "drop") |>
-  print()
+figure4B_gradient <- create_gradient_data_4B(figure4B_data)
 
-# Print the complete table
-cat("\nComplete list of oppositely regulated proteins:\n")
-print(oppositely_regulated_table, n = Inf)
+figure4B <- ggplot() +
+  geom_rect(
+    data = figure4B_gradient,
+    aes(xmin = xmin, xmax = xmax,
+        ymin = y_num - 0.35, ymax = y_num + 0.35,
+        alpha = alpha_val),
+    fill = color_Jurkat_light
+  ) +
+  geom_text(
+    data = figure4B_data |> mutate(y_num = as.numeric(fct_reorder(Description, log_pvalue))),
+    aes(label = Description, x = 0.05, y = y_num),
+    hjust = 0, size = 2.8, color = "black"
+  ) +
+  scale_alpha_identity() +
+  scale_x_continuous(expand = expansion(mult = c(0, 0.1))) +
+  scale_y_continuous(breaks = 1:nrow(figure4B_data), labels = NULL) +
+  labs(x = expression(-log[10]*"("*paste(italic(P), " Value")*")"), y = "") +
+  theme_classic() +
+  theme(
+    axis.title.x = element_text(size = 9),
+    axis.text.x = element_text(color = "black", size = 9),
+    axis.text.y = element_blank(),
+    axis.ticks.y = element_blank()
+  )
 
-# Save to CSV
-write_csv(oppositely_regulated_table, paste0(source_file_path, 'circular_heatmap/oppositely_regulated_proteins.csv'))
-cat("\nOppositely regulated proteins table saved to:", source_file_path, "circular_heatmap/oppositely_regulated_proteins.csv\n")
+ggsave(
+  filename = paste0(figure_file_path, 'Figure4/Figure4B.pdf'),
+  plot = figure4B,
+  height = 1.5, width = 2, units = 'in'
+)
+
+cat("\nFigure 4B saved to:", figure_file_path, "Figure4/Figure4B.pdf\n")
+
+# =============================================================================
+# Figure 4C - Jurkat Example Proteins Dot Plot (Self-contained)
+# =============================================================================
+# Dot plot showing log2(Tuni/Ctrl) for selected Jurkat proteins across cell types
+# Proteins: NFATC2 (Q13469), CTTN (Q14247), SEC31A (O94979)
+# Note: NFATC2 is not identified in HEK293T cells, so only HepG2 and Jurkat shown
+# Uses universal (fixed) y-axis scale across all facets
+# Facet widths are proportional to number of cell types (x-axis categories)
+# Run this section independently to regenerate Figure 4C
+
+library(tidyverse)
+
+# Source data paths and colors
+source('data_source.R')
+
+# Create output directory
+dir.create(paste0(figure_file_path, "Figure4"), showWarnings = FALSE)
+
+# Load normalized O-GlcNAc protein data
+OGlcNAc_protein_norm_HEK293T <- read_csv(
+  paste0(source_file_path, 'normalization/OGlcNAc_protein_norm_HEK293T.csv')
+)
+OGlcNAc_protein_norm_HepG2 <- read_csv(
+  paste0(source_file_path, 'normalization/OGlcNAc_protein_norm_HepG2.csv')
+)
+OGlcNAc_protein_norm_Jurkat <- read_csv(
+  paste0(source_file_path, 'normalization/OGlcNAc_protein_norm_Jurkat.csv')
+)
+
+# Define proteins of interest: NFATC2, CTTN, SEC31A
+proteins_of_interest_4C <- c("Q13469", "Q14247", "O94979")
+
+# Function to extract and calculate fold changes for a cell type
+calculate_fc_4C <- function(norm_data, cell_name, proteins) {
+  norm_data |>
+    filter(Protein.ID %in% proteins) |>
+    dplyr::select(Protein.ID, Gene,
+                  Intensity.Tuni_1_sl_tmm, Intensity.Tuni_2_sl_tmm, Intensity.Tuni_3_sl_tmm,
+                  Intensity.Ctrl_4_sl_tmm, Intensity.Ctrl_5_sl_tmm, Intensity.Ctrl_6_sl_tmm) |>
+    rowwise() |>
+    mutate(
+      mean_Ctrl = mean(c(Intensity.Ctrl_4_sl_tmm, Intensity.Ctrl_5_sl_tmm, Intensity.Ctrl_6_sl_tmm), na.rm = TRUE),
+      log2FC_rep1 = log2(Intensity.Tuni_1_sl_tmm / mean_Ctrl),
+      log2FC_rep2 = log2(Intensity.Tuni_2_sl_tmm / mean_Ctrl),
+      log2FC_rep3 = log2(Intensity.Tuni_3_sl_tmm / mean_Ctrl)
+    ) |>
+    ungroup() |>
+    dplyr::select(Protein.ID, Gene, log2FC_rep1, log2FC_rep2, log2FC_rep3) |>
+    pivot_longer(cols = starts_with("log2FC"), names_to = "replicate", values_to = "log2FC") |>
+    mutate(cell = cell_name)
+}
+
+# Calculate fold changes for each cell type
+fc_HEK293T_4C <- calculate_fc_4C(OGlcNAc_protein_norm_HEK293T, "HEK293T", proteins_of_interest_4C)
+fc_HepG2_4C <- calculate_fc_4C(OGlcNAc_protein_norm_HepG2, "HepG2", proteins_of_interest_4C)
+fc_Jurkat_4C <- calculate_fc_4C(OGlcNAc_protein_norm_Jurkat, "Jurkat", proteins_of_interest_4C)
+
+# Combine all data
+fc_combined_4C <- bind_rows(fc_HEK293T_4C, fc_HepG2_4C, fc_Jurkat_4C) |>
+  mutate(
+    cell = factor(cell, levels = c("HEK293T", "HepG2", "Jurkat")),
+    Gene = factor(Gene, levels = c("NFATC2", "CTTN", "SEC31A"))
+  )
+
+# Remove HEK293T data for NFATC2 (not identified in HEK293T cells)
+fc_combined_4C <- fc_combined_4C |>
+  filter(!(Gene == "NFATC2" & cell == "HEK293T"))
+
+# Drop unused factor levels for proper facet sizing
+fc_combined_4C <- fc_combined_4C |>
+  mutate(cell = droplevels(cell))
+
+# Check data
+cat("\nFold change data for selected Jurkat proteins:\n")
+print(fc_combined_4C)
+
+# Check range of log2FC values
+cat("\nlog2FC range by gene:\n")
+fc_combined_4C |> group_by(Gene) |> summarise(min = min(log2FC, na.rm = TRUE), max = max(log2FC, na.rm = TRUE)) |> print()
+
+# Create dot plot with universal (fixed) y-axis scale
+# Using facet_grid with scales="free_x" and space="free_x" for proportional facet widths
+figure4C <- fc_combined_4C |>
+  ggplot(aes(x = cell, y = log2FC, color = cell)) +
+  geom_hline(yintercept = 0, color = "black", linewidth = 0.5) +
+  geom_hline(yintercept = 0.5, color = "black", linetype = "dashed", linewidth = 0.5) +
+  geom_point(size = 2, position = position_jitter(width = 0.1, seed = 42)) +
+  scale_color_manual(values = colors_cell) +
+  scale_x_discrete(drop = TRUE) +
+  facet_grid(. ~ Gene, scales = "free_x", space = "free_x") +
+  labs(x = "", y = expression(log[2]*"(Tuni/Ctrl)")) +
+  theme_classic() +
+  theme(
+    axis.title.y = element_text(size = 9),
+    axis.text.x = element_text(color = "black", size = 9, angle = 90, hjust = 1),
+    axis.text.y = element_text(color = "black", size = 9),
+    strip.text = element_text(size = 9, face = "bold"),
+    strip.background = element_blank(),
+    legend.position = "none",
+    panel.spacing = unit(0.3, "lines")
+  )
+
+ggsave(
+  filename = paste0(figure_file_path, 'Figure4/Figure4C.pdf'),
+  plot = figure4C,
+  height = 2, width = 2.5, units = 'in'
+)
+
+cat("\nFigure 4C saved to:", figure_file_path, "Figure4/Figure4C.pdf\n")
 
 # =============================================================================
 # Figure 4D - HEK293T Example Proteins Dot Plot (Self-contained)
@@ -457,444 +579,95 @@ ggsave(
 cat("\nFigure 4D saved to:", figure_file_path, "Figure4/Figure4D.pdf\n")
 
 # =============================================================================
-# Figure 4E - Jurkat Example Proteins Dot Plot (Self-contained)
+# Data Preparation - Oppositely Regulated Proteins List
 # =============================================================================
-# Dot plot showing log2(Tuni/Ctrl) for selected Jurkat proteins across cell types
-# Proteins: NFATC2 (Q13469), CTTN (Q14247), SEC31A (O94979)
-# Uses free y-axis scales for each facet to accommodate different fold change ranges
-# Run this section independently to regenerate Figure 4E
+# Extract proteins that are significantly upregulated in one cell type
+# but significantly downregulated in another cell type (used for Figure 4D)
 
-library(tidyverse)
+# Get up and down regulated proteins for each cell type
+up_HEK293T <- OGlcNAc_protein_DE_HEK293T |> filter(logFC > 0.5, adj.P.Val < 0.05) |> dplyr::select(Protein.ID)
+up_HepG2 <- OGlcNAc_protein_DE_HepG2 |> filter(logFC > 0.5, adj.P.Val < 0.05) |> dplyr::select(Protein.ID)
+up_Jurkat <- OGlcNAc_protein_DE_Jurkat |> filter(logFC > 0.5, adj.P.Val < 0.05) |> dplyr::select(Protein.ID)
 
-# Source data paths and colors
-source('data_source.R')
+down_HEK293T <- OGlcNAc_protein_DE_HEK293T |> filter(logFC < -0.5, adj.P.Val < 0.05) |> dplyr::select(Protein.ID)
+down_HepG2 <- OGlcNAc_protein_DE_HepG2 |> filter(logFC < -0.5, adj.P.Val < 0.05) |> dplyr::select(Protein.ID)
+down_Jurkat <- OGlcNAc_protein_DE_Jurkat |> filter(logFC < -0.5, adj.P.Val < 0.05) |> dplyr::select(Protein.ID)
 
-# Create output directory
-dir.create(paste0(figure_file_path, "Figure4"), showWarnings = FALSE)
-
-# Load normalized O-GlcNAc protein data
-OGlcNAc_protein_norm_HEK293T <- read_csv(
-  paste0(source_file_path, 'normalization/OGlcNAc_protein_norm_HEK293T.csv')
+# Find all oppositely regulated proteins (union of all combinations)
+oppositely_regulated <- bind_rows(
+  # Down in HepG2, Up in HEK293T
+  inner_join(down_HepG2, up_HEK293T, by = "Protein.ID") |> mutate(pattern = "down_HepG2_up_HEK293T"),
+  # Down in HepG2, Up in Jurkat
+  inner_join(down_HepG2, up_Jurkat, by = "Protein.ID") |> mutate(pattern = "down_HepG2_up_Jurkat"),
+  # Down in HEK293T, Up in HepG2
+  inner_join(down_HEK293T, up_HepG2, by = "Protein.ID") |> mutate(pattern = "down_HEK293T_up_HepG2"),
+  # Down in HEK293T, Up in Jurkat
+  inner_join(down_HEK293T, up_Jurkat, by = "Protein.ID") |> mutate(pattern = "down_HEK293T_up_Jurkat"),
+  # Down in Jurkat, Up in HEK293T
+  inner_join(down_Jurkat, up_HEK293T, by = "Protein.ID") |> mutate(pattern = "down_Jurkat_up_HEK293T"),
+  # Down in Jurkat, Up in HepG2
+  inner_join(down_Jurkat, up_HepG2, by = "Protein.ID") |> mutate(pattern = "down_Jurkat_up_HepG2")
 )
-OGlcNAc_protein_norm_HepG2 <- read_csv(
-  paste0(source_file_path, 'normalization/OGlcNAc_protein_norm_HepG2.csv')
-)
-OGlcNAc_protein_norm_Jurkat <- read_csv(
-  paste0(source_file_path, 'normalization/OGlcNAc_protein_norm_Jurkat.csv')
-)
 
-# Define proteins of interest: NFATC2, CTTN, SEC31A
-proteins_of_interest_4E <- c("Q13469", "Q14247", "O94979")
+# Get unique proteins
+unique_proteins <- unique(oppositely_regulated$Protein.ID)
+cat("\nTotal unique oppositely regulated proteins:", length(unique_proteins), "\n")
 
-# Function to extract and calculate fold changes for a cell type
-calculate_fc_4E <- function(norm_data, cell_name, proteins) {
-  norm_data |>
-    filter(Protein.ID %in% proteins) |>
-    dplyr::select(Protein.ID, Gene,
-                  Intensity.Tuni_1_sl_tmm, Intensity.Tuni_2_sl_tmm, Intensity.Tuni_3_sl_tmm,
-                  Intensity.Ctrl_4_sl_tmm, Intensity.Ctrl_5_sl_tmm, Intensity.Ctrl_6_sl_tmm) |>
-    rowwise() |>
-    mutate(
-      mean_Ctrl = mean(c(Intensity.Ctrl_4_sl_tmm, Intensity.Ctrl_5_sl_tmm, Intensity.Ctrl_6_sl_tmm), na.rm = TRUE),
-      log2FC_rep1 = log2(Intensity.Tuni_1_sl_tmm / mean_Ctrl),
-      log2FC_rep2 = log2(Intensity.Tuni_2_sl_tmm / mean_Ctrl),
-      log2FC_rep3 = log2(Intensity.Tuni_3_sl_tmm / mean_Ctrl)
-    ) |>
-    ungroup() |>
-    dplyr::select(Protein.ID, Gene, log2FC_rep1, log2FC_rep2, log2FC_rep3) |>
-    pivot_longer(cols = starts_with("log2FC"), names_to = "replicate", values_to = "log2FC") |>
-    mutate(cell = cell_name)
-}
+# Create comprehensive table with fold changes from all cell types
+oppositely_regulated_table <- tibble(Protein.ID = unique_proteins) |>
+  left_join(
+    OGlcNAc_protein_DE_HEK293T |> dplyr::select(Protein.ID, logFC_HEK293T = logFC, adjPVal_HEK293T = adj.P.Val),
+    by = "Protein.ID"
+  ) |>
+  left_join(
+    OGlcNAc_protein_DE_HepG2 |> dplyr::select(Protein.ID, logFC_HepG2 = logFC, adjPVal_HepG2 = adj.P.Val),
+    by = "Protein.ID"
+  ) |>
+  left_join(
+    OGlcNAc_protein_DE_Jurkat |> dplyr::select(Protein.ID, logFC_Jurkat = logFC, adjPVal_Jurkat = adj.P.Val),
+    by = "Protein.ID"
+  )
 
-# Calculate fold changes for each cell type
-fc_HEK293T_4E <- calculate_fc_4E(OGlcNAc_protein_norm_HEK293T, "HEK293T", proteins_of_interest_4E)
-fc_HepG2_4E <- calculate_fc_4E(OGlcNAc_protein_norm_HepG2, "HepG2", proteins_of_interest_4E)
-fc_Jurkat_4E <- calculate_fc_4E(OGlcNAc_protein_norm_Jurkat, "Jurkat", proteins_of_interest_4E)
-
-# Combine all data
-fc_combined_4E <- bind_rows(fc_HEK293T_4E, fc_HepG2_4E, fc_Jurkat_4E) |>
+# Add regulation status for each cell type
+oppositely_regulated_table <- oppositely_regulated_table |>
   mutate(
-    cell = factor(cell, levels = c("HEK293T", "HepG2", "Jurkat")),
-    Gene = factor(Gene, levels = c("NFATC2", "CTTN", "SEC31A"))
-  )
-
-# Check data
-cat("\nFold change data for selected Jurkat proteins:\n")
-print(fc_combined_4E)
-
-# Check range of log2FC values
-cat("\nlog2FC range by gene:\n")
-fc_combined_4E |> group_by(Gene) |> summarise(min = min(log2FC, na.rm = TRUE), max = max(log2FC, na.rm = TRUE)) |> print()
-
-# Create dot plot with free y-axis scales for each facet
-figure4E <- fc_combined_4E |>
-  ggplot(aes(x = cell, y = log2FC, color = cell)) +
-  geom_hline(yintercept = 0, color = "black", linewidth = 0.5) +
-  geom_hline(yintercept = 0.5, color = "black", linetype = "dashed", linewidth = 0.5) +
-  geom_point(size = 2, position = position_jitter(width = 0.1, seed = 42)) +
-  scale_color_manual(values = colors_cell) +
-  facet_wrap(~ Gene, nrow = 1, scales = "free") +
-  labs(x = "", y = expression(log[2]*"(Tuni/Ctrl)")) +
-  theme_classic() +
-  theme(
-    axis.title.y = element_text(size = 9),
-    axis.text.x = element_text(color = "black", size = 9, angle = 30, hjust = 1),
-    axis.text.y = element_text(color = "black", size = 9),
-    strip.text = element_text(size = 9, face = "bold"),
-    strip.background = element_blank(),
-    legend.position = "none"
-  )
-
-ggsave(
-  filename = paste0(figure_file_path, 'Figure4/Figure4E.pdf'),
-  plot = figure4E,
-  height = 1.8, width = 3.5, units = 'in'
-)
-
-cat("\nFigure 4E saved to:", figure_file_path, "Figure4/Figure4E.pdf\n")
-
-# =============================================================================
-# Figure 4D Alternatives - Examine All Oppositely Regulated Proteins
-# =============================================================================
-# Run this section to generate individual plots for each alternative protein
-# Examine the plots to find good replacements for the current examples
-
-library(tidyverse)
-library(circlize)
-library(scales)
-library(ComplexHeatmap)
-library(gridBase)
-
-source('data_source_DE.R')
-
-# Load normalized O-GlcNAc protein data
-OGlcNAc_protein_norm_HEK293T <- read_csv(
-  paste0(source_file_path, 'normalization/OGlcNAc_protein_norm_HEK293T.csv')
-)
-OGlcNAc_protein_norm_HepG2 <- read_csv(
-  paste0(source_file_path, 'normalization/OGlcNAc_protein_norm_HepG2.csv')
-)
-OGlcNAc_protein_norm_Jurkat <- read_csv(
-  paste0(source_file_path, 'normalization/OGlcNAc_protein_norm_Jurkat.csv')
-)
-
-# Create output directory
-dir.create(paste0(figure_file_path, "Figure4/alternatives"), showWarnings = FALSE)
-
-# Function to extract and calculate fold changes for a cell type
-calculate_fc <- function(norm_data, cell_name, proteins) {
-  norm_data |>
-    filter(Protein.ID %in% proteins) |>
-    dplyr::select(Protein.ID, Gene,
-                  Intensity.Tuni_1_sl_tmm, Intensity.Tuni_2_sl_tmm, Intensity.Tuni_3_sl_tmm,
-                  Intensity.Ctrl_4_sl_tmm, Intensity.Ctrl_5_sl_tmm, Intensity.Ctrl_6_sl_tmm) |>
-    rowwise() |>
-    mutate(
-      mean_Ctrl = mean(c(Intensity.Ctrl_4_sl_tmm, Intensity.Ctrl_5_sl_tmm, Intensity.Ctrl_6_sl_tmm), na.rm = TRUE),
-      log2FC_rep1 = log2(Intensity.Tuni_1_sl_tmm / mean_Ctrl),
-      log2FC_rep2 = log2(Intensity.Tuni_2_sl_tmm / mean_Ctrl),
-      log2FC_rep3 = log2(Intensity.Tuni_3_sl_tmm / mean_Ctrl)
-    ) |>
-    ungroup() |>
-    dplyr::select(Protein.ID, Gene, log2FC_rep1, log2FC_rep2, log2FC_rep3) |>
-    pivot_longer(cols = starts_with("log2FC"), names_to = "replicate", values_to = "log2FC") |>
-    mutate(cell = cell_name)
-}
-
-# Function to create and save individual protein plot
-create_protein_plot <- function(protein_id, gene_name, pattern_desc) {
-  fc_HEK293T <- calculate_fc(OGlcNAc_protein_norm_HEK293T, "HEK293T", protein_id)
-  fc_HepG2 <- calculate_fc(OGlcNAc_protein_norm_HepG2, "HepG2", protein_id)
-  fc_Jurkat <- calculate_fc(OGlcNAc_protein_norm_Jurkat, "Jurkat", protein_id)
-
-  fc_combined <- bind_rows(fc_HEK293T, fc_HepG2, fc_Jurkat) |>
-    mutate(cell = factor(cell, levels = c("HEK293T", "HepG2", "Jurkat"))) |>
-    filter(!is.na(log2FC))
-
-  if (nrow(fc_combined) == 0) {
-    cat("No data for", gene_name, "\n")
-    return(NULL)
-  }
-
-  p <- fc_combined |>
-    ggplot(aes(x = cell, y = log2FC, color = cell)) +
-    geom_hline(yintercept = 0, color = "black", linewidth = 0.5) +
-    geom_hline(yintercept = 0.5, color = "black", linetype = "dashed", linewidth = 0.5) +
-    geom_hline(yintercept = -0.5, color = "black", linetype = "dashed", linewidth = 0.5) +
-    geom_point(size = 3, position = position_jitter(width = 0.1, seed = 42)) +
-    scale_color_manual(values = colors_cell) +
-    labs(x = "", y = expression(log[2]*"(Tuni/Ctrl)"),
-         title = paste0(gene_name, " (", protein_id, ")"),
-         subtitle = pattern_desc) +
-    theme_classic() +
-    theme(
-      plot.title = element_text(size = 10, face = "bold"),
-      plot.subtitle = element_text(size = 8, color = "gray40"),
-      axis.title.y = element_text(size = 9),
-      axis.text.x = element_text(color = "black", size = 9, angle = 30, hjust = 1),
-      axis.text.y = element_text(color = "black", size = 9),
-      legend.position = "none"
+    status_HEK293T = case_when(
+      logFC_HEK293T > 0.5 & adjPVal_HEK293T < 0.05 ~ "Up",
+      logFC_HEK293T < -0.5 & adjPVal_HEK293T < 0.05 ~ "Down",
+      TRUE ~ "NS"
+    ),
+    status_HepG2 = case_when(
+      logFC_HepG2 > 0.5 & adjPVal_HepG2 < 0.05 ~ "Up",
+      logFC_HepG2 < -0.5 & adjPVal_HepG2 < 0.05 ~ "Down",
+      TRUE ~ "NS"
+    ),
+    status_Jurkat = case_when(
+      logFC_Jurkat > 0.5 & adjPVal_Jurkat < 0.05 ~ "Up",
+      logFC_Jurkat < -0.5 & adjPVal_Jurkat < 0.05 ~ "Down",
+      TRUE ~ "NS"
     )
+  ) |>
+  arrange(Protein.ID)
 
-  ggsave(
-    filename = paste0(figure_file_path, 'Figure4/alternatives/', gene_name, '_', protein_id, '.pdf'),
-    plot = p,
-    height = 2.5, width = 2, units = 'in'
-  )
+# Print summary
+cat("\nOppositely regulated proteins by pattern:\n")
+oppositely_regulated |>
+  group_by(pattern) |>
+  summarise(n = n(), .groups = "drop") |>
+  print()
 
-  cat("Saved:", gene_name, "\n")
-  return(p)
-}
+# Print the complete table
+cat("\nComplete list of oppositely regulated proteins:\n")
+print(oppositely_regulated_table, n = Inf)
 
-# All oppositely regulated proteins with their patterns
-# Format: Protein.ID, Gene, Pattern description
-alternatives <- list(
-  c("Q9Y4L1", "HYOU1", "HEK293T:Up, HepG2:Down, Jurkat:Down"),
-  c("Q14814", "MEF2D", "HEK293T:Down, HepG2:Up, Jurkat:NS"),
-  c("Q8NBS9", "TXNDC5", "HEK293T:Up, HepG2:Down, Jurkat:Down"),
-  c("O00571", "DDX3X", "HEK293T:Down, HepG2:Up, Jurkat:NS"),
-  c("P42167", "TMPO", "HEK293T:Up, HepG2:NS, Jurkat:Down"),
-  c("P78347", "GTF2I", "HEK293T:Up, HepG2:Down, Jurkat:NS"),
-  c("Q14651", "PLS1", "HEK293T:Up, HepG2:NS, Jurkat:Down"),
-  c("Q6PCB5", "RSBN1L", "HEK293T:Up, HepG2:NS, Jurkat:Down"),
-  c("Q7L1W4", "LRRC8D", "HEK293T:Up, HepG2:NS, Jurkat:Down"),
-  c("Q9HBD1", "RC3H2", "HEK293T:Down, HepG2:Up, Jurkat:NS"),
-  c("Q9NSI2", "SLX9", "HEK293T:Up, HepG2:Down, Jurkat:NS"),
-  c("Q9ULT8", "HECTD1", "HEK293T:Down, HepG2:Up, Jurkat:NS"),
-  c("O95721", "SNAP29", "HEK293T:NS, HepG2:Up, Jurkat:Down"),
-  c("P27540", "ARNT", "HEK293T:NS, HepG2:Up, Jurkat:Down"),
-  c("Q8IX12", "CCAR1", "HEK293T:Down, HepG2:NS, Jurkat:Up"),
-  c("Q9GZM5", "YIPF3", "HEK293T:NS, HepG2:Down, Jurkat:Up"),
-  c("Q9UHY1", "NRBP1", "HEK293T:Up, HepG2:Down, Jurkat:NS")
-)
-
-# Generate all plots
-cat("\n=== Generating alternative protein plots ===\n")
-for (alt in alternatives) {
-  create_protein_plot(alt[1], alt[2], alt[3])
-}
-
-cat("\n=== All alternative plots saved to:", figure_file_path, "Figure4/alternatives/ ===\n")
-cat("Review the plots and select 3 proteins to replace the current examples.\n")
-cat("Then update the 'proteins_of_interest' in the Figure 4D section.\n")
-
-# =============================================================================
-# Figure 4D Candidates - HEK293T Examples (Self-contained)
-# =============================================================================
-# Generate individual plots for all 20 HEK293T candidates for manual review
-
-library(tidyverse)
-
-# Source data paths and colors
-source('data_source_DE.R')
-
-# Load normalized O-GlcNAc protein data
-OGlcNAc_protein_norm_HEK293T <- read_csv(
-  paste0(source_file_path, 'normalization/OGlcNAc_protein_norm_HEK293T.csv')
-)
-OGlcNAc_protein_norm_HepG2 <- read_csv(
-  paste0(source_file_path, 'normalization/OGlcNAc_protein_norm_HepG2.csv')
-)
-OGlcNAc_protein_norm_Jurkat <- read_csv(
-  paste0(source_file_path, 'normalization/OGlcNAc_protein_norm_Jurkat.csv')
-)
-
-# Create output directory for HEK293T candidates
-dir.create(paste0(figure_file_path, "Figure4/Figure4D_candidates"), showWarnings = FALSE)
-
-# Load HEK293T candidates from CSV
-HEK293T_candidates <- read_csv(
-  paste0(figure_file_path, 'Figure4/HEK293T_OGlcNAc_candidates_20_literature.csv')
-)
-
-cat("\nHEK293T candidates loaded:", nrow(HEK293T_candidates), "proteins\n")
-print(HEK293T_candidates |> dplyr::select(Gene, Protein_ID, logFC))
-
-# Function to extract and calculate fold changes for a cell type
-calculate_fc_4D <- function(norm_data, cell_name, proteins) {
-  norm_data |>
-    filter(Protein.ID %in% proteins) |>
-    dplyr::select(Protein.ID, Gene,
-                  Intensity.Tuni_1_sl_tmm, Intensity.Tuni_2_sl_tmm, Intensity.Tuni_3_sl_tmm,
-                  Intensity.Ctrl_4_sl_tmm, Intensity.Ctrl_5_sl_tmm, Intensity.Ctrl_6_sl_tmm) |>
-    rowwise() |>
-    mutate(
-      mean_Ctrl = mean(c(Intensity.Ctrl_4_sl_tmm, Intensity.Ctrl_5_sl_tmm, Intensity.Ctrl_6_sl_tmm), na.rm = TRUE),
-      log2FC_rep1 = log2(Intensity.Tuni_1_sl_tmm / mean_Ctrl),
-      log2FC_rep2 = log2(Intensity.Tuni_2_sl_tmm / mean_Ctrl),
-      log2FC_rep3 = log2(Intensity.Tuni_3_sl_tmm / mean_Ctrl)
-    ) |>
-    ungroup() |>
-    dplyr::select(Protein.ID, Gene, log2FC_rep1, log2FC_rep2, log2FC_rep3) |>
-    pivot_longer(cols = starts_with("log2FC"), names_to = "replicate", values_to = "log2FC") |>
-    mutate(cell = cell_name)
-}
-
-# Function to create and save individual protein plot for HEK293T candidates
-create_HEK293T_candidate_plot <- function(protein_id, gene_name) {
-  fc_HEK293T <- calculate_fc_4D(OGlcNAc_protein_norm_HEK293T, "HEK293T", protein_id)
-  fc_HepG2 <- calculate_fc_4D(OGlcNAc_protein_norm_HepG2, "HepG2", protein_id)
-  fc_Jurkat <- calculate_fc_4D(OGlcNAc_protein_norm_Jurkat, "Jurkat", protein_id)
-
-  fc_combined <- bind_rows(fc_HEK293T, fc_HepG2, fc_Jurkat) |>
-    mutate(cell = factor(cell, levels = c("HEK293T", "HepG2", "Jurkat"))) |>
-    filter(!is.na(log2FC))
-
-  if (nrow(fc_combined) == 0) {
-    cat("No data for", gene_name, "(", protein_id, ")\n")
-    return(NULL)
-  }
-
-  p <- fc_combined |>
-    ggplot(aes(x = cell, y = log2FC, color = cell)) +
-    geom_hline(yintercept = 0, color = "black", linewidth = 0.5) +
-    geom_hline(yintercept = 0.5, color = "black", linetype = "dashed", linewidth = 0.5) +
-    geom_hline(yintercept = -0.5, color = "black", linetype = "dashed", linewidth = 0.5) +
-    geom_point(size = 3, position = position_jitter(width = 0.1, seed = 42)) +
-    scale_color_manual(values = colors_cell) +
-    labs(x = "", y = expression(log[2]*"(Tuni/Ctrl)"),
-         title = paste0(gene_name, " (", protein_id, ")")) +
-    theme_classic() +
-    theme(
-      plot.title = element_text(size = 10, face = "bold"),
-      axis.title.y = element_text(size = 9),
-      axis.text.x = element_text(color = "black", size = 9, angle = 30, hjust = 1),
-      axis.text.y = element_text(color = "black", size = 9),
-      legend.position = "none"
-    )
-
-  ggsave(
-    filename = paste0(figure_file_path, 'Figure4/Figure4D_candidates/', gene_name, '_', protein_id, '.pdf'),
-    plot = p,
-    height = 2.5, width = 2, units = 'in'
-  )
-
-  cat("Saved:", gene_name, "(", protein_id, ")\n")
-  return(p)
-}
-
-# Generate all HEK293T candidate plots
-cat("\n=== Generating HEK293T candidate plots for Figure 4D ===\n")
-for (i in 1:nrow(HEK293T_candidates)) {
-  create_HEK293T_candidate_plot(
-    HEK293T_candidates$Protein_ID[i],
-    HEK293T_candidates$Gene[i]
-  )
-}
-
-cat("\n=== All HEK293T candidate plots saved to:", figure_file_path, "Figure4/Figure4D_candidates/ ===\n")
-
-# =============================================================================
-# Figure 4E Candidates - Jurkat Examples (Self-contained)
-# =============================================================================
-# Generate individual plots for all 20 Jurkat candidates for manual review
-
-library(tidyverse)
-
-# Source data paths and colors
-source('data_source_DE.R')
-
-# Load normalized O-GlcNAc protein data
-OGlcNAc_protein_norm_HEK293T <- read_csv(
-  paste0(source_file_path, 'normalization/OGlcNAc_protein_norm_HEK293T.csv')
-)
-OGlcNAc_protein_norm_HepG2 <- read_csv(
-  paste0(source_file_path, 'normalization/OGlcNAc_protein_norm_HepG2.csv')
-)
-OGlcNAc_protein_norm_Jurkat <- read_csv(
-  paste0(source_file_path, 'normalization/OGlcNAc_protein_norm_Jurkat.csv')
-)
-
-# Create output directory for Jurkat candidates
-dir.create(paste0(figure_file_path, "Figure4/Figure4E_candidates"), showWarnings = FALSE)
-
-# Load Jurkat candidates from CSV
-Jurkat_candidates <- read_csv(
-  paste0(figure_file_path, 'Figure4/Jurkat_OGlcNAc_candidates_20_literature.csv')
-)
-
-cat("\nJurkat candidates loaded:", nrow(Jurkat_candidates), "proteins\n")
-print(Jurkat_candidates |> dplyr::select(Gene, Protein_ID, logFC))
-
-# Function to extract and calculate fold changes for a cell type
-calculate_fc_4E <- function(norm_data, cell_name, proteins) {
-  norm_data |>
-    filter(Protein.ID %in% proteins) |>
-    dplyr::select(Protein.ID, Gene,
-                  Intensity.Tuni_1_sl_tmm, Intensity.Tuni_2_sl_tmm, Intensity.Tuni_3_sl_tmm,
-                  Intensity.Ctrl_4_sl_tmm, Intensity.Ctrl_5_sl_tmm, Intensity.Ctrl_6_sl_tmm) |>
-    rowwise() |>
-    mutate(
-      mean_Ctrl = mean(c(Intensity.Ctrl_4_sl_tmm, Intensity.Ctrl_5_sl_tmm, Intensity.Ctrl_6_sl_tmm), na.rm = TRUE),
-      log2FC_rep1 = log2(Intensity.Tuni_1_sl_tmm / mean_Ctrl),
-      log2FC_rep2 = log2(Intensity.Tuni_2_sl_tmm / mean_Ctrl),
-      log2FC_rep3 = log2(Intensity.Tuni_3_sl_tmm / mean_Ctrl)
-    ) |>
-    ungroup() |>
-    dplyr::select(Protein.ID, Gene, log2FC_rep1, log2FC_rep2, log2FC_rep3) |>
-    pivot_longer(cols = starts_with("log2FC"), names_to = "replicate", values_to = "log2FC") |>
-    mutate(cell = cell_name)
-}
-
-# Function to create and save individual protein plot for Jurkat candidates
-create_Jurkat_candidate_plot <- function(protein_id, gene_name) {
-  fc_HEK293T <- calculate_fc_4E(OGlcNAc_protein_norm_HEK293T, "HEK293T", protein_id)
-  fc_HepG2 <- calculate_fc_4E(OGlcNAc_protein_norm_HepG2, "HepG2", protein_id)
-  fc_Jurkat <- calculate_fc_4E(OGlcNAc_protein_norm_Jurkat, "Jurkat", protein_id)
-
-  fc_combined <- bind_rows(fc_HEK293T, fc_HepG2, fc_Jurkat) |>
-    mutate(cell = factor(cell, levels = c("HEK293T", "HepG2", "Jurkat"))) |>
-    filter(!is.na(log2FC))
-
-  if (nrow(fc_combined) == 0) {
-    cat("No data for", gene_name, "(", protein_id, ")\n")
-    return(NULL)
-  }
-
-  p <- fc_combined |>
-    ggplot(aes(x = cell, y = log2FC, color = cell)) +
-    geom_hline(yintercept = 0, color = "black", linewidth = 0.5) +
-    geom_hline(yintercept = 0.5, color = "black", linetype = "dashed", linewidth = 0.5) +
-    geom_hline(yintercept = -0.5, color = "black", linetype = "dashed", linewidth = 0.5) +
-    geom_point(size = 3, position = position_jitter(width = 0.1, seed = 42)) +
-    scale_color_manual(values = colors_cell) +
-    labs(x = "", y = expression(log[2]*"(Tuni/Ctrl)"),
-         title = paste0(gene_name, " (", protein_id, ")")) +
-    theme_classic() +
-    theme(
-      plot.title = element_text(size = 10, face = "bold"),
-      axis.title.y = element_text(size = 9),
-      axis.text.x = element_text(color = "black", size = 9, angle = 30, hjust = 1),
-      axis.text.y = element_text(color = "black", size = 9),
-      legend.position = "none"
-    )
-
-  ggsave(
-    filename = paste0(figure_file_path, 'Figure4/Figure4E_candidates/', gene_name, '_', protein_id, '.pdf'),
-    plot = p,
-    height = 2.5, width = 2, units = 'in'
-  )
-
-  cat("Saved:", gene_name, "(", protein_id, ")\n")
-  return(p)
-}
-
-# Generate all Jurkat candidate plots
-cat("\n=== Generating Jurkat candidate plots for Figure 4E ===\n")
-for (i in 1:nrow(Jurkat_candidates)) {
-  create_Jurkat_candidate_plot(
-    Jurkat_candidates$Protein_ID[i],
-    Jurkat_candidates$Gene[i]
-  )
-}
-
-cat("\n=== All Jurkat candidate plots saved to:", figure_file_path, "Figure4/Figure4E_candidates/ ===\n")
+# Save to CSV
+write_csv(oppositely_regulated_table, paste0(source_file_path, 'circular_heatmap/oppositely_regulated_proteins.csv'))
+cat("\nOppositely regulated proteins table saved to:", source_file_path, "circular_heatmap/oppositely_regulated_proteins.csv\n")
 
 # =============================================================================
 # GO Enrichment Data Preparation (Run GO Analysis & Preview Results)
 # =============================================================================
 # This section runs GO enrichment analysis and previews results
-# Figure 4B and 4C sections below are self-contained and can be run independently
 
 # Load required libraries
 library(tidyverse)
@@ -1153,197 +926,338 @@ OGlcNAc_down_Jurkat_GO_result |>
   print()
 
 # =============================================================================
-# Figure 4B - HEK293T GO Enrichment Barplot (Self-contained)
+# Figure 4D Alternatives - Examine All Oppositely Regulated Proteins
 # =============================================================================
-# Run this section independently to regenerate Figure 4B
+# Run this section to generate individual plots for each alternative protein
+# Examine the plots to find good replacements for the current examples
+
+library(tidyverse)
+library(circlize)
+library(scales)
+library(ComplexHeatmap)
+library(gridBase)
+
+source('data_source_DE.R')
+
+# Load normalized O-GlcNAc protein data
+OGlcNAc_protein_norm_HEK293T <- read_csv(
+  paste0(source_file_path, 'normalization/OGlcNAc_protein_norm_HEK293T.csv')
+)
+OGlcNAc_protein_norm_HepG2 <- read_csv(
+  paste0(source_file_path, 'normalization/OGlcNAc_protein_norm_HepG2.csv')
+)
+OGlcNAc_protein_norm_Jurkat <- read_csv(
+  paste0(source_file_path, 'normalization/OGlcNAc_protein_norm_Jurkat.csv')
+)
+
+# Create output directory
+dir.create(paste0(figure_file_path, "Figure4/alternatives"), showWarnings = FALSE)
+
+# Function to extract and calculate fold changes for a cell type
+calculate_fc <- function(norm_data, cell_name, proteins) {
+  norm_data |>
+    filter(Protein.ID %in% proteins) |>
+    dplyr::select(Protein.ID, Gene,
+                  Intensity.Tuni_1_sl_tmm, Intensity.Tuni_2_sl_tmm, Intensity.Tuni_3_sl_tmm,
+                  Intensity.Ctrl_4_sl_tmm, Intensity.Ctrl_5_sl_tmm, Intensity.Ctrl_6_sl_tmm) |>
+    rowwise() |>
+    mutate(
+      mean_Ctrl = mean(c(Intensity.Ctrl_4_sl_tmm, Intensity.Ctrl_5_sl_tmm, Intensity.Ctrl_6_sl_tmm), na.rm = TRUE),
+      log2FC_rep1 = log2(Intensity.Tuni_1_sl_tmm / mean_Ctrl),
+      log2FC_rep2 = log2(Intensity.Tuni_2_sl_tmm / mean_Ctrl),
+      log2FC_rep3 = log2(Intensity.Tuni_3_sl_tmm / mean_Ctrl)
+    ) |>
+    ungroup() |>
+    dplyr::select(Protein.ID, Gene, log2FC_rep1, log2FC_rep2, log2FC_rep3) |>
+    pivot_longer(cols = starts_with("log2FC"), names_to = "replicate", values_to = "log2FC") |>
+    mutate(cell = cell_name)
+}
+
+# Function to create and save individual protein plot
+create_protein_plot <- function(protein_id, gene_name, pattern_desc) {
+  fc_HEK293T <- calculate_fc(OGlcNAc_protein_norm_HEK293T, "HEK293T", protein_id)
+  fc_HepG2 <- calculate_fc(OGlcNAc_protein_norm_HepG2, "HepG2", protein_id)
+  fc_Jurkat <- calculate_fc(OGlcNAc_protein_norm_Jurkat, "Jurkat", protein_id)
+
+  fc_combined <- bind_rows(fc_HEK293T, fc_HepG2, fc_Jurkat) |>
+    mutate(cell = factor(cell, levels = c("HEK293T", "HepG2", "Jurkat"))) |>
+    filter(!is.na(log2FC))
+
+  if (nrow(fc_combined) == 0) {
+    cat("No data for", gene_name, "\n")
+    return(NULL)
+  }
+
+  p <- fc_combined |>
+    ggplot(aes(x = cell, y = log2FC, color = cell)) +
+    geom_hline(yintercept = 0, color = "black", linewidth = 0.5) +
+    geom_hline(yintercept = 0.5, color = "black", linetype = "dashed", linewidth = 0.5) +
+    geom_hline(yintercept = -0.5, color = "black", linetype = "dashed", linewidth = 0.5) +
+    geom_point(size = 3, position = position_jitter(width = 0.1, seed = 42)) +
+    scale_color_manual(values = colors_cell) +
+    labs(x = "", y = expression(log[2]*"(Tuni/Ctrl)"),
+         title = paste0(gene_name, " (", protein_id, ")"),
+         subtitle = pattern_desc) +
+    theme_classic() +
+    theme(
+      plot.title = element_text(size = 10, face = "bold"),
+      plot.subtitle = element_text(size = 8, color = "gray40"),
+      axis.title.y = element_text(size = 9),
+      axis.text.x = element_text(color = "black", size = 9, angle = 30, hjust = 1),
+      axis.text.y = element_text(color = "black", size = 9),
+      legend.position = "none"
+    )
+
+  ggsave(
+    filename = paste0(figure_file_path, 'Figure4/alternatives/', gene_name, '_', protein_id, '.pdf'),
+    plot = p,
+    height = 2.5, width = 2, units = 'in'
+  )
+
+  cat("Saved:", gene_name, "\n")
+  return(p)
+}
+
+# All oppositely regulated proteins with their patterns
+# Format: Protein.ID, Gene, Pattern description
+alternatives <- list(
+  c("Q9Y4L1", "HYOU1", "HEK293T:Up, HepG2:Down, Jurkat:Down"),
+  c("Q14814", "MEF2D", "HEK293T:Down, HepG2:Up, Jurkat:NS"),
+  c("Q8NBS9", "TXNDC5", "HEK293T:Up, HepG2:Down, Jurkat:Down"),
+  c("O00571", "DDX3X", "HEK293T:Down, HepG2:Up, Jurkat:NS"),
+  c("P42167", "TMPO", "HEK293T:Up, HepG2:NS, Jurkat:Down"),
+  c("P78347", "GTF2I", "HEK293T:Up, HepG2:Down, Jurkat:NS"),
+  c("Q14651", "PLS1", "HEK293T:Up, HepG2:NS, Jurkat:Down"),
+  c("Q6PCB5", "RSBN1L", "HEK293T:Up, HepG2:NS, Jurkat:Down"),
+  c("Q7L1W4", "LRRC8D", "HEK293T:Up, HepG2:NS, Jurkat:Down"),
+  c("Q9HBD1", "RC3H2", "HEK293T:Down, HepG2:Up, Jurkat:NS"),
+  c("Q9NSI2", "SLX9", "HEK293T:Up, HepG2:Down, Jurkat:NS"),
+  c("Q9ULT8", "HECTD1", "HEK293T:Down, HepG2:Up, Jurkat:NS"),
+  c("O95721", "SNAP29", "HEK293T:NS, HepG2:Up, Jurkat:Down"),
+  c("P27540", "ARNT", "HEK293T:NS, HepG2:Up, Jurkat:Down"),
+  c("Q8IX12", "CCAR1", "HEK293T:Down, HepG2:NS, Jurkat:Up"),
+  c("Q9GZM5", "YIPF3", "HEK293T:NS, HepG2:Down, Jurkat:Up"),
+  c("Q9UHY1", "NRBP1", "HEK293T:Up, HepG2:Down, Jurkat:NS")
+)
+
+# Generate all plots
+cat("\n=== Generating alternative protein plots ===\n")
+for (alt in alternatives) {
+  create_protein_plot(alt[1], alt[2], alt[3])
+}
+
+cat("\n=== All alternative plots saved to:", figure_file_path, "Figure4/alternatives/ ===\n")
+cat("Review the plots and select 3 proteins to replace the current examples.\n")
+cat("Then update the 'proteins_of_interest' in the Figure 4D section.\n")
+
+# =============================================================================
+# Figure 4D Candidates - HEK293T Examples (Self-contained)
+# =============================================================================
+# Generate individual plots for all 20 HEK293T candidates for manual review
 
 library(tidyverse)
 
 # Source data paths and colors
-source('data_source.R')
+source('data_source_DE.R')
 
-# Create output directory
-dir.create(paste0(figure_file_path, "Figure4"), showWarnings = FALSE)
+# Load normalized O-GlcNAc protein data
+OGlcNAc_protein_norm_HEK293T <- read_csv(
+  paste0(source_file_path, 'normalization/OGlcNAc_protein_norm_HEK293T.csv')
+)
+OGlcNAc_protein_norm_HepG2 <- read_csv(
+  paste0(source_file_path, 'normalization/OGlcNAc_protein_norm_HepG2.csv')
+)
+OGlcNAc_protein_norm_Jurkat <- read_csv(
+  paste0(source_file_path, 'normalization/OGlcNAc_protein_norm_Jurkat.csv')
+)
 
-# Define lighter pastel color for HEK293T gradient bars
-color_HEK293T_light <- "#7DCDE5"
+# Create output directory for HEK293T candidates
+dir.create(paste0(figure_file_path, "Figure4/Figure4D_candidates"), showWarnings = FALSE)
 
-# Function to create gradient bar data
-create_gradient_data_4B <- function(df, n_segments = 50) {
-  df <- df |> mutate(y_num = as.numeric(fct_reorder(Description, log_pvalue)))
+# Load HEK293T candidates from CSV
+HEK293T_candidates <- read_csv(
+  paste0(figure_file_path, 'Figure4/HEK293T_OGlcNAc_candidates_20_literature.csv')
+)
 
-  gradient_df <- do.call(rbind, lapply(1:nrow(df), function(i) {
-    row <- df[i, ]
-    segments <- data.frame(
-      Description = row$Description,
-      y_num = row$y_num,
-      xmin = seq(0, row$log_pvalue, length.out = n_segments + 1)[-(n_segments + 1)],
-      xmax = seq(0, row$log_pvalue, length.out = n_segments + 1)[-1],
-      segment = 1:n_segments
-    )
-    segments$alpha_val <- seq(0.9, 0.3, length.out = n_segments)
-    segments
-  }))
-  gradient_df
+cat("\nHEK293T candidates loaded:", nrow(HEK293T_candidates), "proteins\n")
+print(HEK293T_candidates |> dplyr::select(Gene, Protein_ID, logFC))
+
+# Function to extract and calculate fold changes for a cell type
+calculate_fc_4D <- function(norm_data, cell_name, proteins) {
+  norm_data |>
+    filter(Protein.ID %in% proteins) |>
+    dplyr::select(Protein.ID, Gene,
+                  Intensity.Tuni_1_sl_tmm, Intensity.Tuni_2_sl_tmm, Intensity.Tuni_3_sl_tmm,
+                  Intensity.Ctrl_4_sl_tmm, Intensity.Ctrl_5_sl_tmm, Intensity.Ctrl_6_sl_tmm) |>
+    rowwise() |>
+    mutate(
+      mean_Ctrl = mean(c(Intensity.Ctrl_4_sl_tmm, Intensity.Ctrl_5_sl_tmm, Intensity.Ctrl_6_sl_tmm), na.rm = TRUE),
+      log2FC_rep1 = log2(Intensity.Tuni_1_sl_tmm / mean_Ctrl),
+      log2FC_rep2 = log2(Intensity.Tuni_2_sl_tmm / mean_Ctrl),
+      log2FC_rep3 = log2(Intensity.Tuni_3_sl_tmm / mean_Ctrl)
+    ) |>
+    ungroup() |>
+    dplyr::select(Protein.ID, Gene, log2FC_rep1, log2FC_rep2, log2FC_rep3) |>
+    pivot_longer(cols = starts_with("log2FC"), names_to = "replicate", values_to = "log2FC") |>
+    mutate(cell = cell_name)
 }
 
-# Load HEK293T GO enrichment results
-OGlcNAc_up_HEK293T_GO_result <- read_csv(
-  paste0(source_file_path, 'enrichment/OGlcNAc_up_HEK293T_GO.csv')
-)
+# Function to create and save individual protein plot for HEK293T candidates
+create_HEK293T_candidate_plot <- function(protein_id, gene_name) {
+  fc_HEK293T <- calculate_fc_4D(OGlcNAc_protein_norm_HEK293T, "HEK293T", protein_id)
+  fc_HepG2 <- calculate_fc_4D(OGlcNAc_protein_norm_HepG2, "HepG2", protein_id)
+  fc_Jurkat <- calculate_fc_4D(OGlcNAc_protein_norm_Jurkat, "Jurkat", protein_id)
 
-# Figure 4B - HEK293T Barplot with gradient
-figure4B_data <- OGlcNAc_up_HEK293T_GO_result |>
-  filter(
-    Description %in% c(
-      'ribonucleotide metabolic process',
-      'response to retinoic acid',
-      'ribosome biogenesis',
-      'forebrain generation of neurons',
-      'protein folding'
+  fc_combined <- bind_rows(fc_HEK293T, fc_HepG2, fc_Jurkat) |>
+    mutate(cell = factor(cell, levels = c("HEK293T", "HepG2", "Jurkat"))) |>
+    filter(!is.na(log2FC))
+
+  if (nrow(fc_combined) == 0) {
+    cat("No data for", gene_name, "(", protein_id, ")\n")
+    return(NULL)
+  }
+
+  p <- fc_combined |>
+    ggplot(aes(x = cell, y = log2FC, color = cell)) +
+    geom_hline(yintercept = 0, color = "black", linewidth = 0.5) +
+    geom_hline(yintercept = 0.5, color = "black", linetype = "dashed", linewidth = 0.5) +
+    geom_hline(yintercept = -0.5, color = "black", linetype = "dashed", linewidth = 0.5) +
+    geom_point(size = 3, position = position_jitter(width = 0.1, seed = 42)) +
+    scale_color_manual(values = colors_cell) +
+    labs(x = "", y = expression(log[2]*"(Tuni/Ctrl)"),
+         title = paste0(gene_name, " (", protein_id, ")")) +
+    theme_classic() +
+    theme(
+      plot.title = element_text(size = 10, face = "bold"),
+      axis.title.y = element_text(size = 9),
+      axis.text.x = element_text(color = "black", size = 9, angle = 30, hjust = 1),
+      axis.text.y = element_text(color = "black", size = 9),
+      legend.position = "none"
     )
-  ) |>
-  mutate(
-    Description = case_when(
-      Description == "ribonucleotide metabolic process" ~ "Ribonucleotide metabolism",
-      Description == "response to retinoic acid" ~ "Response to retinoic acid",
-      Description == "ribosome biogenesis" ~ "Ribosome biogenesis",
-      Description == "forebrain generation of neurons" ~ "Forebrain neuron generation",
-      Description == "protein folding" ~ "Protein folding",
-      TRUE ~ Description
-    ),
-    log_pvalue = -log10(pvalue)
+
+  ggsave(
+    filename = paste0(figure_file_path, 'Figure4/Figure4D_candidates/', gene_name, '_', protein_id, '.pdf'),
+    plot = p,
+    height = 2.5, width = 2, units = 'in'
   )
 
-figure4B_gradient <- create_gradient_data_4B(figure4B_data)
+  cat("Saved:", gene_name, "(", protein_id, ")\n")
+  return(p)
+}
 
-figure4B <- ggplot() +
-  geom_rect(
-    data = figure4B_gradient,
-    aes(xmin = xmin, xmax = xmax,
-        ymin = y_num - 0.35, ymax = y_num + 0.35,
-        alpha = alpha_val),
-    fill = color_HEK293T_light
-  ) +
-  geom_text(
-    data = figure4B_data |> mutate(y_num = as.numeric(fct_reorder(Description, log_pvalue))),
-    aes(label = Description, x = 0.05, y = y_num),
-    hjust = 0, size = 2.8, color = "black"
-  ) +
-  scale_alpha_identity() +
-  scale_x_continuous(expand = expansion(mult = c(0, 0.1))) +
-  scale_y_continuous(breaks = 1:nrow(figure4B_data), labels = NULL) +
-  labs(x = expression(-log[10]*"("*paste(italic(P), " Value")*")"), y = "") +
-  theme_classic() +
-  theme(
-    axis.title.x = element_text(size = 9),
-    axis.text.x = element_text(color = "black", size = 9),
-    axis.text.y = element_blank(),
-    axis.ticks.y = element_blank()
+# Generate all HEK293T candidate plots
+cat("\n=== Generating HEK293T candidate plots for Figure 4D ===\n")
+for (i in 1:nrow(HEK293T_candidates)) {
+  create_HEK293T_candidate_plot(
+    HEK293T_candidates$Protein_ID[i],
+    HEK293T_candidates$Gene[i]
   )
+}
 
-ggsave(
-  filename = paste0(figure_file_path, 'Figure4/Figure4B.pdf'),
-  plot = figure4B,
-  height = 1.5, width = 2, units = 'in'
-)
-
-cat("\nFigure 4B saved to:", figure_file_path, "Figure4/Figure4B.pdf\n")
+cat("\n=== All HEK293T candidate plots saved to:", figure_file_path, "Figure4/Figure4D_candidates/ ===\n")
 
 # =============================================================================
-# Figure 4C - Jurkat GO Enrichment Barplot (Self-contained)
+# Figure 4C Candidates - Jurkat Examples (Self-contained)
 # =============================================================================
-# Run this section independently to regenerate Figure 4C
+# Generate individual plots for all 20 Jurkat candidates for manual review
 
 library(tidyverse)
 
 # Source data paths and colors
-source('data_source.R')
+source('data_source_DE.R')
 
-# Create output directory
-dir.create(paste0(figure_file_path, "Figure4"), showWarnings = FALSE)
+# Load normalized O-GlcNAc protein data
+OGlcNAc_protein_norm_HEK293T <- read_csv(
+  paste0(source_file_path, 'normalization/OGlcNAc_protein_norm_HEK293T.csv')
+)
+OGlcNAc_protein_norm_HepG2 <- read_csv(
+  paste0(source_file_path, 'normalization/OGlcNAc_protein_norm_HepG2.csv')
+)
+OGlcNAc_protein_norm_Jurkat <- read_csv(
+  paste0(source_file_path, 'normalization/OGlcNAc_protein_norm_Jurkat.csv')
+)
 
-# Define lighter pastel color for Jurkat gradient bars
-color_Jurkat_light <- "#4DC4B0"
+# Create output directory for Jurkat candidates
+dir.create(paste0(figure_file_path, "Figure4/Figure4C_candidates"), showWarnings = FALSE)
 
-# Function to create gradient bar data
-create_gradient_data_4C <- function(df, n_segments = 50) {
-  df <- df |> mutate(y_num = as.numeric(fct_reorder(Description, log_pvalue)))
+# Load Jurkat candidates from CSV
+Jurkat_candidates <- read_csv(
+  paste0(figure_file_path, 'Figure4/Jurkat_OGlcNAc_candidates_20_literature.csv')
+)
 
-  gradient_df <- do.call(rbind, lapply(1:nrow(df), function(i) {
-    row <- df[i, ]
-    segments <- data.frame(
-      Description = row$Description,
-      y_num = row$y_num,
-      xmin = seq(0, row$log_pvalue, length.out = n_segments + 1)[-(n_segments + 1)],
-      xmax = seq(0, row$log_pvalue, length.out = n_segments + 1)[-1],
-      segment = 1:n_segments
-    )
-    segments$alpha_val <- seq(0.9, 0.3, length.out = n_segments)
-    segments
-  }))
-  gradient_df
+cat("\nJurkat candidates loaded:", nrow(Jurkat_candidates), "proteins\n")
+print(Jurkat_candidates |> dplyr::select(Gene, Protein_ID, logFC))
+
+# Function to extract and calculate fold changes for a cell type
+calculate_fc_4C_cand <- function(norm_data, cell_name, proteins) {
+  norm_data |>
+    filter(Protein.ID %in% proteins) |>
+    dplyr::select(Protein.ID, Gene,
+                  Intensity.Tuni_1_sl_tmm, Intensity.Tuni_2_sl_tmm, Intensity.Tuni_3_sl_tmm,
+                  Intensity.Ctrl_4_sl_tmm, Intensity.Ctrl_5_sl_tmm, Intensity.Ctrl_6_sl_tmm) |>
+    rowwise() |>
+    mutate(
+      mean_Ctrl = mean(c(Intensity.Ctrl_4_sl_tmm, Intensity.Ctrl_5_sl_tmm, Intensity.Ctrl_6_sl_tmm), na.rm = TRUE),
+      log2FC_rep1 = log2(Intensity.Tuni_1_sl_tmm / mean_Ctrl),
+      log2FC_rep2 = log2(Intensity.Tuni_2_sl_tmm / mean_Ctrl),
+      log2FC_rep3 = log2(Intensity.Tuni_3_sl_tmm / mean_Ctrl)
+    ) |>
+    ungroup() |>
+    dplyr::select(Protein.ID, Gene, log2FC_rep1, log2FC_rep2, log2FC_rep3) |>
+    pivot_longer(cols = starts_with("log2FC"), names_to = "replicate", values_to = "log2FC") |>
+    mutate(cell = cell_name)
 }
 
-# Load Jurkat GO enrichment results (upregulated)
-OGlcNAc_up_Jurkat_GO_result <- read_csv(
-  paste0(source_file_path, 'enrichment/OGlcNAc_up_Jurkat_GO.csv')
-)
+# Function to create and save individual protein plot for Jurkat candidates
+create_Jurkat_candidate_plot <- function(protein_id, gene_name) {
+  fc_HEK293T <- calculate_fc_4C_cand(OGlcNAc_protein_norm_HEK293T, "HEK293T", protein_id)
+  fc_HepG2 <- calculate_fc_4C_cand(OGlcNAc_protein_norm_HepG2, "HepG2", protein_id)
+  fc_Jurkat <- calculate_fc_4C_cand(OGlcNAc_protein_norm_Jurkat, "Jurkat", protein_id)
 
-# Figure 4C - Jurkat Barplot with gradient
-figure4C_data <- OGlcNAc_up_Jurkat_GO_result |>
-  filter(
-    Description %in% c(
-      'regulation of leukocyte proliferation',
-      'cell activation',
-      'lymphocyte activation',
-      'leukocyte migration',
-      'regulation of T cell activation'
+  fc_combined <- bind_rows(fc_HEK293T, fc_HepG2, fc_Jurkat) |>
+    mutate(cell = factor(cell, levels = c("HEK293T", "HepG2", "Jurkat"))) |>
+    filter(!is.na(log2FC))
+
+  if (nrow(fc_combined) == 0) {
+    cat("No data for", gene_name, "(", protein_id, ")\n")
+    return(NULL)
+  }
+
+  p <- fc_combined |>
+    ggplot(aes(x = cell, y = log2FC, color = cell)) +
+    geom_hline(yintercept = 0, color = "black", linewidth = 0.5) +
+    geom_hline(yintercept = 0.5, color = "black", linetype = "dashed", linewidth = 0.5) +
+    geom_hline(yintercept = -0.5, color = "black", linetype = "dashed", linewidth = 0.5) +
+    geom_point(size = 3, position = position_jitter(width = 0.1, seed = 42)) +
+    scale_color_manual(values = colors_cell) +
+    labs(x = "", y = expression(log[2]*"(Tuni/Ctrl)"),
+         title = paste0(gene_name, " (", protein_id, ")")) +
+    theme_classic() +
+    theme(
+      plot.title = element_text(size = 10, face = "bold"),
+      axis.title.y = element_text(size = 9),
+      axis.text.x = element_text(color = "black", size = 9, angle = 30, hjust = 1),
+      axis.text.y = element_text(color = "black", size = 9),
+      legend.position = "none"
     )
-  ) |>
-  mutate(
-    Description = case_when(
-      Description == "regulation of leukocyte proliferation" ~ "Leukocyte proliferation",
-      Description == "cell activation" ~ "Cell activation",
-      Description == "lymphocyte activation" ~ "Lymphocyte activation",
-      Description == "leukocyte migration" ~ "Leukocyte migration",
-      Description == "regulation of T cell activation" ~ "T cell activation",
-      TRUE ~ Description
-    ),
-    log_pvalue = -log10(pvalue)
+
+  ggsave(
+    filename = paste0(figure_file_path, 'Figure4/Figure4C_candidates/', gene_name, '_', protein_id, '.pdf'),
+    plot = p,
+    height = 2.5, width = 2, units = 'in'
   )
 
-figure4C_gradient <- create_gradient_data_4C(figure4C_data)
+  cat("Saved:", gene_name, "(", protein_id, ")\n")
+  return(p)
+}
 
-figure4C <- ggplot() +
-  geom_rect(
-    data = figure4C_gradient,
-    aes(xmin = xmin, xmax = xmax,
-        ymin = y_num - 0.35, ymax = y_num + 0.35,
-        alpha = alpha_val),
-    fill = color_Jurkat_light
-  ) +
-  geom_text(
-    data = figure4C_data |> mutate(y_num = as.numeric(fct_reorder(Description, log_pvalue))),
-    aes(label = Description, x = 0.05, y = y_num),
-    hjust = 0, size = 2.8, color = "black"
-  ) +
-  scale_alpha_identity() +
-  scale_x_continuous(expand = expansion(mult = c(0, 0.1))) +
-  scale_y_continuous(breaks = 1:nrow(figure4C_data), labels = NULL) +
-  labs(x = expression(-log[10]*"("*paste(italic(P), " Value")*")"), y = "") +
-  theme_classic() +
-  theme(
-    axis.title.x = element_text(size = 9),
-    axis.text.x = element_text(color = "black", size = 9),
-    axis.text.y = element_blank(),
-    axis.ticks.y = element_blank()
+# Generate all Jurkat candidate plots
+cat("\n=== Generating Jurkat candidate plots for Figure 4C ===\n")
+for (i in 1:nrow(Jurkat_candidates)) {
+  create_Jurkat_candidate_plot(
+    Jurkat_candidates$Protein_ID[i],
+    Jurkat_candidates$Gene[i]
   )
+}
 
-ggsave(
-  filename = paste0(figure_file_path, 'Figure4/Figure4C.pdf'),
-  plot = figure4C,
-  height = 1.5, width = 2, units = 'in'
-)
-
-cat("\nFigure 4C saved to:", figure_file_path, "Figure4/Figure4C.pdf\n")
+cat("\n=== All Jurkat candidate plots saved to:", figure_file_path, "Figure4/Figure4C_candidates/ ===\n")

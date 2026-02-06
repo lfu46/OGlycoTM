@@ -433,12 +433,10 @@ Figure6A <- features_analysis %>%
   labs(
     x = expression(log[2](Tuni/Ctrl)),
     y = "Density",
-    fill = NULL,
-    title = "Filtered (removed Level1b prob < 0.75)"
+    fill = NULL
   ) +
   theme_bw() +
   theme(
-    plot.title = element_text(size = 8, hjust = 0.5),
     legend.position = "top",
     legend.title = element_text(size = 8),
     legend.text = element_text(size = 8),
@@ -451,7 +449,7 @@ Figure6A <- features_analysis %>%
 
 ggsave(
   paste0(figure_file_path, 'Figure6_filtered/Figure6A_filtered.pdf'),
-  Figure6A, width = 2.5, height = 1.8
+  Figure6A, width = 2, height = 1.5
 )
 cat("\nFigure 6A (filtered) saved.\n")
 
@@ -523,10 +521,9 @@ Figure6B <- ggplot(ss_counts, aes(ymax = ymax, ymin = ymin, xmax = 5, xmin = 2.8
   coord_polar(theta = "y") +
   xlim(c(0, 6.5)) +
   scale_fill_manual(values = ss_colors) +
-  labs(fill = NULL, title = "Filtered") +
+  labs(fill = NULL) +
   theme_void() +
   theme(
-    plot.title = element_text(size = 8, hjust = 0.5),
     legend.position = "bottom",
     legend.key.size = unit(0.3, "cm"),
     legend.text = element_text(size = 8)
@@ -534,7 +531,7 @@ Figure6B <- ggplot(ss_counts, aes(ymax = ymax, ymin = ymin, xmax = 5, xmin = 2.8
 
 ggsave(
   paste0(figure_file_path, 'Figure6_filtered/Figure6B_filtered.pdf'),
-  Figure6B, width = 2, height = 2.2
+  Figure6B, width = 2, height = 2
 )
 cat("Figure 6B (filtered) saved.\n")
 
@@ -576,12 +573,10 @@ Figure6C <- coef_plot_std %>%
   labs(
     x = "",
     y = expression(paste("Standardized Coefficient (Effect of 1 SD on ", log[2], "FC)")),
-    fill = "Significance",
-    title = "Filtered"
+    fill = "Significance"
   ) +
   theme_bw() +
   theme(
-    plot.title = element_text(size = 8, hjust = 0.5),
     legend.position = "right",
     legend.title = element_text(size = 6, color = "black"),
     legend.text = element_text(size = 5, color = "black"),
@@ -592,7 +587,7 @@ Figure6C <- coef_plot_std %>%
 
 ggsave(
   paste0(figure_file_path, 'Figure6_filtered/Figure6C_filtered.pdf'),
-  Figure6C, width = 3.2, height = 2.2
+  Figure6C, width = 3, height = 2
 )
 cat("Figure 6C (filtered) saved.\n")
 
@@ -620,12 +615,10 @@ Figure6D <- interaction_data %>%
   labs(
     x = "",
     y = expression(paste("Mean ", log[2], "FC (Tuni/Ctrl)")),
-    fill = "Region Type",
-    title = "Filtered"
+    fill = "Region Type"
   ) +
   theme_bw() +
   theme(
-    plot.title = element_text(size = 8, hjust = 0.5),
     legend.position = "bottom",
     legend.title = element_text(size = 6, color = "black"),
     legend.text = element_text(size = 5, color = "black"),
@@ -637,7 +630,7 @@ Figure6D <- interaction_data %>%
 
 ggsave(
   paste0(figure_file_path, 'Figure6_filtered/Figure6D_filtered.pdf'),
-  Figure6D, width = 2.2, height = 2.2
+  Figure6D, width = 2, height = 2
 )
 cat("Figure 6D (filtered) saved.\n")
 

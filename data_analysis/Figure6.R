@@ -827,6 +827,43 @@ ggsave(
 cat("Figure 6E (HYOU1) saved.\n")
 
 # ------------------------------------------------------------------------------
+# Figure 6E Additional: Structured Region Candidate Sites (PyMOL 3D Structures)
+# ------------------------------------------------------------------------------
+# These 4 candidate sites are O-GlcNAc sites significantly upregulated in
+# structured regions (pLDDT >= 50) with annotated protein domains.
+# All are novel sites (not in OGlcNAc Atlas).
+#
+# PyMOL scripts to generate 3D structure figures:
+#   1. Figure6E_PRDX6_Y89_pymol.py
+#      - P30041 Y89 (Peroxiredoxin-6) - HEK293T
+#      - logFC: +1.50, pLDDT: 98.25
+#      - Domain: Thioredoxin (5-169)
+#
+#   2. Figure6E_PRDX6_T95_pymol.py
+#      - P30041 T95 (Peroxiredoxin-6) - HepG2
+#      - logFC: +1.51, pLDDT: 97.62
+#      - Domain: Thioredoxin (5-169)
+#
+#   3. Figure6E_DDX50_Y492_pymol.py
+#      - Q9BQ39 Y492 (DEAD-box helicase 50) - HepG2
+#      - logFC: +0.95, pLDDT: 94.94
+#      - Domain: Helicase C-terminal (380-524)
+#
+#   4. Figure6E_PWP2_T23_pymol.py
+#      - Q15269 T23 (Periodic tryptophan protein 2) - HepG2
+#      - logFC: +0.45, pLDDT: 92.69
+#      - Domain: WD repeat 1 (12-50)
+#
+# Run PyMOL scripts:
+#   /opt/homebrew/bin/pymol -c -q Figure6E_PRDX6_Y89_pymol.py
+#   /opt/homebrew/bin/pymol -c -q Figure6E_PRDX6_T95_pymol.py
+#   /opt/homebrew/bin/pymol -c -q Figure6E_DDX50_Y492_pymol.py
+#   /opt/homebrew/bin/pymol -c -q Figure6E_PWP2_T23_pymol.py
+#
+# Output directory: Figures/Figure6/Figure6E_candidates/
+# EThcD spectra PDFs are also in the same directory.
+
+# ------------------------------------------------------------------------------
 # Figure 6F: HOXA13 (P31271) - IDR Region Example (3D Structure by PyMOL)
 # ------------------------------------------------------------------------------
 # HOXA13: Homeobox protein Hox-A13

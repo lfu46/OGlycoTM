@@ -170,7 +170,9 @@ class SpectrumAnnotator:
                 return f"[M+{ion.charge}H]+{ion.charge}" if short else ion.annotation
             return f"[M+{ion.charge}H]+{ion.charge}" if short else ion.annotation
         elif ion.ion_type == 'Y':
-            return f"Y{ion.charge}+" if short else ion.annotation
+            # Y0 = peptide only (glycan lost), Y1 = intact glycopeptide
+            y_type = "Y0" if ion.ion_number == 0 else "Y1"
+            return f"{y_type} {ion.charge}+" if short else ion.annotation
         else:
             # b, y, c, z ions
             charge_str = "" if ion.charge == 1 else f" {ion.charge}+"  # Add space before charge
@@ -229,14 +231,14 @@ class SpectrumAnnotator:
         # Set up figure
         if show_error_plot:
             fig = plt.figure(figsize=figsize)
-            gs = GridSpec(4, 1, height_ratios=[1.2, 0.3, 3, 1], hspace=0.05)
+            gs = GridSpec(4, 1, height_ratios=[1.2, 0.5, 3, 1], hspace=0.05)
             ax_seq = fig.add_subplot(gs[0])
             ax_info = fig.add_subplot(gs[1])
             ax_spec = fig.add_subplot(gs[2])
             ax_error = fig.add_subplot(gs[3], sharex=ax_spec)
         else:
             fig = plt.figure(figsize=(figsize[0], figsize[1] * 0.8))
-            gs = GridSpec(3, 1, height_ratios=[1.2, 0.3, 3], hspace=0.05)
+            gs = GridSpec(3, 1, height_ratios=[1.2, 0.5, 3], hspace=0.05)
             ax_seq = fig.add_subplot(gs[0])
             ax_info = fig.add_subplot(gs[1])
             ax_spec = fig.add_subplot(gs[2])
@@ -321,13 +323,14 @@ class SpectrumAnnotator:
                      f"Charge: +{self.precursor_charge}")
 
         # Line 2: Annotation statistics with FMR
+        # Seq. Coverage = fraction of peptide bonds with detected fragment ions
+        # FMR = False Match Rate (estimated spurious matches via spectrum shifting)
         info_line2 = (f"Seq. Coverage: {fragmented_bonds}/{total_bonds} ({coverage_pct:.0f}%)    "
-                     f"Intensity: {stats['intensity_annotated']*100:.1f}%    "
-                     f"FMR: {fmr.fmr_peaks*100:.1f}% (peaks), {fmr.fmr_intensity*100:.1f}% (int.)")
+                     f"FMR: {fmr.fmr_peaks*100:.1f}%")
 
-        ax_info.text(0.5, 0.7, info_line1, ha='center', va='center', fontsize=9,
+        ax_info.text(0.5, 0.75, info_line1, ha='center', va='center', fontsize=9,
                     fontfamily='Arial', transform=ax_info.transAxes)
-        ax_info.text(0.5, 0.3, info_line2, ha='center', va='center', fontsize=8,
+        ax_info.text(0.5, 0.25, info_line2, ha='center', va='center', fontsize=8,
                     fontfamily='Arial', transform=ax_info.transAxes, color='#555555')
 
         # =====================================================================

@@ -227,3 +227,21 @@ done
 ```
 
 Note: Requires ImageMagick (`brew install imagemagick`). 600 DPI TIFFs are large (~80-90 MB each) but publication-quality.
+
+## PDF to Text Extraction (Token-Efficient)
+
+Extract text from PDF files for uploading to Claude Desktop (avoids image tokens):
+
+```bash
+# Requires poppler: brew install poppler
+
+# Single file (compact, token-efficient)
+pdftotext "input.pdf" "output.txt"
+
+# Batch convert all PDFs in a folder
+for pdf in /path/to/folder/*.pdf; do
+  pdftotext "$pdf" "${pdf%.pdf}.txt"
+done
+```
+
+Note: The default mode (no flags) is most token-efficient. Use `-layout` only if you need to preserve table/column structure (costs more tokens due to extra whitespace).

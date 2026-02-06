@@ -597,12 +597,19 @@ def match_peaks(theoretical_ions: List[TheoreticalIon],
     # Isotope mass spacing (C13 - C12)
     ISOTOPE_SPACING = 1.003355
 
-    # Sort theoretical ions: prioritize base ions (no neutral loss) over neutral loss ions
-    # This ensures base ions get matched first before neutral loss variants claim peaks
+    # Sort theoretical ions by priority:
+    # 1. Y ions (glycan) first - these are important diagnostic ions
+    # 2. Base ions before neutral loss ions
+    # 3. Then by m/z
     def ion_sort_key(ion):
-        # Priority: 0 for base ions, 1 for neutral loss ions
-        nl_priority = 0 if not ion.neutral_loss else 1
-        return (nl_priority, ion.mz)
+        # Priority: Y ions get highest priority (0), then base ions (1), then NL ions (2)
+        if ion.ion_type == 'Y':
+            type_priority = 0
+        elif not ion.neutral_loss:
+            type_priority = 1
+        else:
+            type_priority = 2
+        return (type_priority, ion.mz)
 
     sorted_ions = sorted(theoretical_ions, key=ion_sort_key)
 

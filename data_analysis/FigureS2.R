@@ -1,98 +1,98 @@
-# Figure S2: Euler plot for localized O-GlcNAc sites across three cell types
-# Shows overlap of O-GlcNAc modification sites between HEK293T, HepG2, and Jurkat
+# Figure S2: HEK293T GO Enrichment Barplot
+# Originally Figure 4B - Shows top 5 GO terms enriched in HEK293T upregulated O-GlcNAc proteins
 
 library(tidyverse)
-library(eulerr)
+library(devEMF)  # For EMF output
 
 # Source data paths and colors
 source('data_source.R')
 
-# Load O-GlcNAc site data
-OGlcNAc_site_HEK293T <- read_csv(
-  paste0(source_file_path, 'site/OGlcNAc_site_HEK293T.csv')
-)
-OGlcNAc_site_HepG2 <- read_csv(
-  paste0(source_file_path, 'site/OGlcNAc_site_HepG2.csv')
-)
-OGlcNAc_site_Jurkat <- read_csv(
-  paste0(source_file_path, 'site/OGlcNAc_site_Jurkat.csv')
-)
+# Create output directory
+dir.create(paste0(figure_file_path, "FigureS2"), showWarnings = FALSE)
 
-# Extract unique sites from each cell type using site_index
-sites_HEK293T <- OGlcNAc_site_HEK293T |>
-  pull(site_index) |>
-  unique()
+# Define lighter pastel color for HEK293T gradient bars
+color_HEK293T_light <- "#7DCDE5"
 
-sites_HepG2 <- OGlcNAc_site_HepG2 |>
-  pull(site_index) |>
-  unique()
+# Function to create gradient bar data
+create_gradient_data_S2 <- function(df, n_segments = 50) {
+  df <- df |> mutate(y_num = as.numeric(fct_reorder(Description, log_pvalue)))
 
-sites_Jurkat <- OGlcNAc_site_Jurkat |>
-  pull(site_index) |>
-  unique()
+  gradient_df <- do.call(rbind, lapply(1:nrow(df), function(i) {
+    row <- df[i, ]
+    segments <- data.frame(
+      Description = row$Description,
+      y_num = row$y_num,
+      xmin = seq(0, row$log_pvalue, length.out = n_segments + 1)[-(n_segments + 1)],
+      xmax = seq(0, row$log_pvalue, length.out = n_segments + 1)[-1],
+      segment = 1:n_segments
+    )
+    segments$alpha_val <- seq(0.9, 0.3, length.out = n_segments)
+    segments
+  }))
+  gradient_df
+}
 
-# Print site counts
-cat("O-GlcNAc sites per cell type:\n")
-cat("HEK293T:", length(sites_HEK293T), "\n")
-cat("HepG2:", length(sites_HepG2), "\n")
-cat("Jurkat:", length(sites_Jurkat), "\n")
-
-# Create list for euler diagram with cell type names and counts
-# Order: HepG2, Jurkat, HEK293T (same as Figure 2A/2B for consistent positioning)
-OGlcNAc_site_list <- list(
-  sites_HepG2,
-  sites_Jurkat,
-  sites_HEK293T
-)
-names(OGlcNAc_site_list) <- c(
-  paste0("HepG2 (", length(sites_HepG2), ")"),
-  paste0("Jurkat (", length(sites_Jurkat), ")"),
-  paste0("HEK293T (", length(sites_HEK293T), ")")
+# Load HEK293T GO enrichment results
+OGlcNAc_up_HEK293T_GO_result <- read_csv(
+  paste0(source_file_path, 'enrichment/OGlcNAc_up_HEK293T_GO.csv')
 )
 
-# Create euler object (proportional)
-OGlcNAc_site_euler <- euler(OGlcNAc_site_list)
+# Figure S2 - HEK293T Barplot with gradient
+figureS2_data <- OGlcNAc_up_HEK293T_GO_result |>
+  filter(
+    Description %in% c(
+      'ribonucleotide metabolic process',
+      'response to retinoic acid',
+      'ribosome biogenesis',
+      'forebrain generation of neurons',
+      'protein folding'
+    )
+  ) |>
+  mutate(
+    Description = case_when(
+      Description == "ribonucleotide metabolic process" ~ "Ribonucleotide metabolism",
+      Description == "response to retinoic acid" ~ "Response to retinoic acid",
+      Description == "ribosome biogenesis" ~ "Ribosome biogenesis",
+      Description == "forebrain generation of neurons" ~ "Forebrain neuron generation",
+      Description == "protein folding" ~ "Protein folding",
+      TRUE ~ Description
+    ),
+    log_pvalue = -log10(pvalue)
+  )
 
-# Create color vector (matching the order in the list)
-# HepG2 = salmon, Jurkat = green, HEK293T = blue
-FigureS2_colors <- c(
-  "#F39B7F",
-  "#00A087",
-  "#4DBBD5"
+figureS2_gradient <- create_gradient_data_S2(figureS2_data)
+
+FigureS2 <- ggplot() +
+  geom_rect(
+    data = figureS2_gradient,
+    aes(xmin = xmin, xmax = xmax,
+        ymin = y_num - 0.35, ymax = y_num + 0.35,
+        alpha = alpha_val),
+    fill = color_HEK293T_light
+  ) +
+  geom_text(
+    data = figureS2_data |> mutate(y_num = as.numeric(fct_reorder(Description, log_pvalue))),
+    aes(label = Description, x = 0.05, y = y_num),
+    hjust = 0, size = 2.8, color = "black"
+  ) +
+  scale_alpha_identity() +
+  scale_x_continuous(expand = expansion(mult = c(0, 0.1))) +
+  scale_y_continuous(breaks = 1:nrow(figureS2_data), labels = NULL) +
+  labs(x = bquote("-"*log[10]*"("*italic(P)~Value*")"), y = "") +
+  theme_classic() +
+  theme(
+    axis.title.x = element_text(size = 9),
+    axis.text.x = element_text(color = "black", size = 9),
+    axis.text.y = element_blank(),
+    axis.ticks.y = element_blank()
+  )
+
+# Save as EMF format
+emf(
+  file = paste0(figure_file_path, 'FigureS2/FigureS2.emf'),
+  height = 1.5, width = 2
 )
-names(FigureS2_colors) <- names(OGlcNAc_site_list)
-
-# Euler plot with labels and quantities
-FigureS2 <- plot(
-  OGlcNAc_site_euler,
-  fills = list(fill = FigureS2_colors, alpha = 0.5),
-  edges = list(col = "white", lwd = 2),
-  labels = list(font = 1, cex = 0.8),
-  quantities = list(font = 1, cex = 0.8)
-)
-
-# Save plot
-pdf(paste0(figure_file_path, "FigureS2/FigureS2_OGlcNAc_sites_euler.pdf"), width = 2, height = 1.5)
 print(FigureS2)
 dev.off()
 
-# Display in RStudio
-print(FigureS2)
-
-# Print overlap statistics
-cat("\nOverlap statistics:\n")
-common_sites <- intersect(intersect(sites_HEK293T, sites_HepG2), sites_Jurkat)
-cat("Common to all three:", length(common_sites), "\n")
-
-cat("HEK293T & HepG2:", length(intersect(sites_HEK293T, sites_HepG2)), "\n")
-cat("HEK293T & Jurkat:", length(intersect(sites_HEK293T, sites_Jurkat)), "\n")
-cat("HepG2 & Jurkat:", length(intersect(sites_HepG2, sites_Jurkat)), "\n")
-
-unique_HEK293T <- setdiff(setdiff(sites_HEK293T, sites_HepG2), sites_Jurkat)
-unique_HepG2 <- setdiff(setdiff(sites_HepG2, sites_HEK293T), sites_Jurkat)
-unique_Jurkat <- setdiff(setdiff(sites_Jurkat, sites_HEK293T), sites_HepG2)
-cat("Unique to HEK293T:", length(unique_HEK293T), "\n")
-cat("Unique to HepG2:", length(unique_HepG2), "\n")
-cat("Unique to Jurkat:", length(unique_Jurkat), "\n")
-
-cat("\nFigure S2 saved to:", figure_file_path, "FigureS2/\n")
+cat("\nFigure S2 saved to:", figure_file_path, "FigureS2/FigureS2.emf\n")

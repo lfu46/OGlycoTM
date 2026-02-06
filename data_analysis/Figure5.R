@@ -168,6 +168,10 @@ write_csv(
 )
 cat("Saved: OGlcNAc_protein_location_proportion.csv\n")
 
+# Rename Mitochondria to Mitochondrion in the data
+prop_combined <- prop_combined |>
+  mutate(Location = ifelse(Location == "Mitochondria", "Mitochondrion", Location))
+
 # Order locations by total count (descending), with "Other" at the end
 location_order <- prop_combined |>
   group_by(Location) |>
@@ -186,7 +190,7 @@ colors_location <- c(
   "Nucleoplasm" = "#3C5488",
   "Cytosol" = "#00A087",
   "Nucleoli" = "#4DBBD5",
-  "Mitochondria" = "#E64B35",
+  "Mitochondrion" = "#E64B35",
   "Vesicles" = "#F39B7F",
   "Golgi apparatus" = "#8491B4",
   "Endoplasmic reticulum" = "#7E6148",
@@ -210,10 +214,10 @@ figure5A <- prop_combined |>
     axis.title.y = element_text(size = 8),
     axis.text.x = element_text(color = "black", size = 8, angle = 30, hjust = 1),
     axis.text.y = element_text(color = "black", size = 8),
-    legend.title = element_text(size = 6),
-    legend.text = element_text(size = 5),
-    legend.key.size = unit(0.2, "cm"),
-    legend.spacing.y = unit(0.05, "cm")
+    legend.title = element_text(size = 8),
+    legend.text = element_text(size = 7),
+    legend.key.size = unit(0.3, "cm"),
+    legend.spacing.y = unit(0.08, "cm")
   )
 
 # Create output directory
@@ -222,7 +226,7 @@ dir.create(paste0(figure_file_path, "Figure5"), showWarnings = FALSE)
 ggsave(
   filename = paste0(figure_file_path, 'Figure5/Figure5A.pdf'),
   plot = figure5A,
-  height = 1.8, width = 2.5, units = 'in'
+  height = 1.8, width = 2.8, units = 'in'
 )
 
 cat("\nFigure 5A proportion barplot saved to:", figure_file_path, "Figure5/Figure5A.pdf\n")
@@ -493,10 +497,15 @@ dir.create(paste0(figure_file_path, "Figure5"), showWarnings = FALSE)
 # Load pre-computed data
 OGlcNAc_location_combined <- read_csv(
   paste0(source_file_path, 'subcellular_location/OGlcNAc_protein_location_combined.csv')
-)
+) |>
+  mutate(Location = ifelse(Location == "Mitochondria", "Mitochondrion", Location))
 wilcox_across_locations_results <- read_csv(
   paste0(source_file_path, 'subcellular_location/Wilcoxon_across_locations_within_cell.csv')
-)
+) |>
+  mutate(
+    Location_1 = ifelse(Location_1 == "Mitochondria", "Mitochondrion", Location_1),
+    Location_2 = ifelse(Location_2 == "Mitochondria", "Mitochondrion", Location_2)
+  )
 cat("Loaded: OGlcNAc_protein_location_combined.csv and Wilcoxon results\n")
 
 # Define color palette for subcellular locations
@@ -504,7 +513,7 @@ colors_location <- c(
   "Nucleoplasm" = "#3C5488",
   "Cytosol" = "#00A087",
   "Nucleoli" = "#4DBBD5",
-  "Mitochondria" = "#E64B35",
+  "Mitochondrion" = "#E64B35",
   "Vesicles" = "#F39B7F",
   "Golgi apparatus" = "#8491B4",
   "Endoplasmic reticulum" = "#7E6148",
@@ -586,9 +595,12 @@ cat("\nHEK293T significant locations (", length(sig_locations_HEK293T), "):", pa
 cat("HepG2 significant locations (", length(sig_locations_HepG2), "):", paste(sig_locations_HepG2, collapse = ", "), "\n")
 
 # Prepare stat annotations for each cell type
-prepare_stat_annotations <- function(sig_data, cell_name) {
+# y.position starts above the plot area (y_limit_upper) and stacks upward
+# Only keep comparisons with p_adj < 0.01 (** or ***)
+prepare_stat_annotations <- function(sig_data, cell_name, y_start = 1.6, y_step = 0.25) {
   sig_data |>
     filter(cell == cell_name) |>
+    filter(p_adj < 0.01) |>
     mutate(
       group1 = ifelse(Location_1 %in% names(location_abbrev),
                       location_abbrev[Location_1], Location_1),
@@ -598,12 +610,11 @@ prepare_stat_annotations <- function(sig_data, cell_name) {
         p_adj < 0.0001 ~ "****",
         p_adj < 0.001 ~ "***",
         p_adj < 0.01 ~ "**",
-        p_adj < 0.05 ~ "*",
         TRUE ~ "ns"
       )
     ) |>
     arrange(p_adj) |>
-    mutate(y.position = 2.5 + (row_number() - 1) * 0.35)
+    mutate(y.position = y_start + (row_number() - 1) * y_step)
 }
 
 stat_HEK293T <- prepare_stat_annotations(sig_comparisons, "HEK293T")
@@ -634,11 +645,19 @@ dotplot_HepG2 <- OGlcNAc_location_combined |>
 cat("\nHEK293T x-axis locations:", length(unique(dotplot_HEK293T$Location_abbrev)), "\n")
 cat("HepG2 x-axis locations:", length(unique(dotplot_HepG2$Location_abbrev)), "\n")
 
+# Define y-axis limits for zooming in on differences
+y_limit_lower <- -1.5
+y_limit_upper <- 1.5
+
 # Create plot for HEK293T
 plot_HEK293T <- dotplot_HEK293T |>
   ggplot(aes(x = Location_abbrev, y = logFC, color = Location)) +
   geom_hline(yintercept = 0, color = "grey50", linetype = "solid", linewidth = 0.5) +
-  geom_jitter(width = 0.2, size = 1.5, alpha = 0.7) +
+  # Only plot dots within y-axis range (median uses all data)
+  geom_jitter(
+    data = ~ .x |> filter(logFC >= y_limit_lower & logFC <= y_limit_upper),
+    width = 0.2, size = 1.5, alpha = 0.7
+  ) +
   stat_summary(fun = median, geom = "crossbar", width = 0.7, linewidth = 0.3, color = "black") +
   scale_color_manual(values = colors_location) +
   stat_pvalue_manual(
@@ -649,27 +668,29 @@ plot_HEK293T <- dotplot_HEK293T |>
     y.position = "y.position",
     size = 3,
     bracket.size = 0.2,
-    tip.length = 0.005
+    tip.length = 0.01
   ) +
-  labs(x = "", y = expression(log[2](Tuni/Ctrl)), title = "HEK293T") +
-  scale_y_continuous(expand = expansion(mult = c(0.05, 0.1))) +
-  theme_bw() +
+  labs(x = "", y = "") +
+  coord_cartesian(ylim = c(y_limit_lower, y_limit_upper), clip = "off") +
+  theme_classic() +
   theme(
-    plot.title = element_text(size = 9, hjust = 0.5, margin = margin(2, 0, 2, 0)),
-    plot.title.position = "panel",
+    axis.title.x = element_blank(),
     axis.title.y = element_text(size = 9),
-    axis.text.x = element_blank(),
-    axis.ticks.x = element_blank(),
+    axis.text.x = element_text(color = "black", size = 9, angle = 90, hjust = 1, vjust = 0.5),
     axis.text.y = element_text(color = "black", size = 9),
     legend.position = "none",
-    panel.grid.minor = element_blank()
+    plot.margin = margin(t = 40, r = 5, b = 5, l = 5, unit = "pt")
   )
 
 # Create plot for HepG2
 plot_HepG2 <- dotplot_HepG2 |>
   ggplot(aes(x = Location_abbrev, y = logFC, color = Location)) +
   geom_hline(yintercept = 0, color = "grey50", linetype = "solid", linewidth = 0.5) +
-  geom_jitter(width = 0.2, size = 1.5, alpha = 0.7) +
+  # Only plot dots within y-axis range (median uses all data)
+  geom_jitter(
+    data = ~ .x |> filter(logFC >= y_limit_lower & logFC <= y_limit_upper),
+    width = 0.2, size = 1.5, alpha = 0.7
+  ) +
   stat_summary(fun = median, geom = "crossbar", width = 0.7, linewidth = 0.3, color = "black") +
   scale_color_manual(values = colors_location) +
   stat_pvalue_manual(
@@ -680,29 +701,27 @@ plot_HepG2 <- dotplot_HepG2 |>
     y.position = "y.position",
     size = 3,
     bracket.size = 0.2,
-    tip.length = 0.005
+    tip.length = 0.01
   ) +
-  labs(x = "", y = "", title = "HepG2") +
-  scale_y_continuous(expand = expansion(mult = c(0.05, 0.1))) +
-  theme_bw() +
+  labs(x = "", y = expression(log[2](Tuni/Ctrl))) +
+  coord_cartesian(ylim = c(y_limit_lower, y_limit_upper), clip = "off") +
+  theme_classic() +
   theme(
-    plot.title = element_text(size = 9, hjust = 0.5, margin = margin(2, 0, 2, 0)),
-    plot.title.position = "panel",
+    axis.title.x = element_blank(),
     axis.title.y = element_text(size = 9),
-    axis.text.x = element_blank(),
-    axis.ticks.x = element_blank(),
+    axis.text.x = element_text(color = "black", size = 9, angle = 90, hjust = 1, vjust = 0.5),
     axis.text.y = element_text(color = "black", size = 9),
     legend.position = "none",
-    panel.grid.minor = element_blank()
+    plot.margin = margin(t = 40, r = 5, b = 5, l = 5, unit = "pt")
   )
 
-# Combine plots
-figure5B <- ggarrange(plot_HEK293T, plot_HepG2, ncol = 2, nrow = 1)
+# Combine plots (HepG2 on left, HEK293T on right)
+figure5B <- ggarrange(plot_HepG2, plot_HEK293T, ncol = 2, nrow = 1)
 
 ggsave(
   filename = paste0(figure_file_path, 'Figure5/Figure5B.pdf'),
   plot = figure5B,
-  height = 1.8, width = 3.5, units = 'in'
+  height = 3, width = 3.5, units = 'in'
 )
 
 cat("\nFigure 5B dotplot saved to:", figure_file_path, "Figure5/Figure5B.pdf\n")
@@ -711,12 +730,11 @@ cat("\nFigure 5B complete.\n")
 cat("Results saved to:", source_file_path, "subcellular_location/\n")
 
 # =============================================================================
-# Figure 5C-5E - Location-Specific O-GlcNAc Protein Dot Plots
+# Figure 5C-5D - Location-Specific O-GlcNAc Protein Dot Plots
 # =============================================================================
 # Dot plots for selected proteins from specific subcellular locations:
 # - Figure 5C: Plasma Membrane proteins (HEK293T)
-# - Figure 5D: ER proteins (HepG2)
-# - Figure 5E: Mitochondria proteins (HepG2)
+# - Figure 5D: Mitochondrion proteins (HepG2)
 
 # Load required libraries
 library(tidyverse)
@@ -731,7 +749,8 @@ dir.create(paste0(figure_file_path, "Figure5"), showWarnings = FALSE)
 # Load location combined data
 OGlcNAc_location_combined <- read_csv(
   paste0(source_file_path, 'subcellular_location/OGlcNAc_protein_location_combined.csv')
-)
+) |>
+  mutate(Location = ifelse(Location == "Mitochondria", "Mitochondrion", Location))
 cat("Loaded: OGlcNAc_protein_location_combined.csv\n")
 
 # Load normalized data for each cell type
@@ -775,35 +794,52 @@ OGlcNAc_ER_HepG2 <- OGlcNAc_location_combined |>
 write_csv(OGlcNAc_ER_HepG2, paste0(source_file_path, 'subcellular_location/OGlcNAc_ER_HepG2.csv'))
 
 OGlcNAc_Mito_HepG2 <- OGlcNAc_location_combined |>
-  filter(cell == "HepG2", Location == "Mitochondria")
+  filter(cell == "HepG2", Location == "Mitochondrion")
 write_csv(OGlcNAc_Mito_HepG2, paste0(source_file_path, 'subcellular_location/OGlcNAc_Mito_HepG2.csv'))
 
 cat("Saved location-specific protein lists\n")
 
-# Figure 5C - Plasma Membrane proteins (HEK293T)
+# Figure 5C - Combined: HEK293T PM and HepG2 Mitochondrion proteins
 selected_proteins_PM <- c("P11166", "O00161", "Q9Y5M8")
+selected_proteins_Mito <- c("Q9H479", "P28331", "Q92667")
 
+# Prepare PM data
 log2FC_data_PM <- extract_log2FC_data(OGlcNAc_protein_norm_HEK293T, "HEK293T", selected_proteins_PM) |>
-  filter(!is.na(log2FC) & is.finite(log2FC))
+  filter(!is.na(log2FC) & is.finite(log2FC)) |>
+  mutate(facet = "HEK293T PM")
 
-cat("\n========== Figure 5C: PM O-GlcNAc Proteins (HEK293T) ==========\n")
+cat("\n========== Figure 5C: HEK293T PM O-GlcNAc Proteins ==========\n")
 print(log2FC_data_PM |> group_by(Gene) |> summarise(n = n(), mean_log2FC = mean(log2FC), .groups = "drop"))
 
-gene_labels_PM <- log2FC_data_PM |> dplyr::select(Protein.ID, Gene) |> distinct()
-log2FC_data_PM <- log2FC_data_PM |> mutate(Gene = factor(Gene, levels = gene_labels_PM$Gene))
+# Prepare Mito data
+log2FC_data_Mito <- extract_log2FC_data(OGlcNAc_protein_norm_HepG2, "HepG2", selected_proteins_Mito) |>
+  filter(!is.na(log2FC) & is.finite(log2FC)) |>
+  mutate(facet = "HepG2 Mito")
 
-figure5C <- log2FC_data_PM |>
-  ggplot(aes(x = log2FC, y = Gene)) +
+cat("\n========== Figure 5C: HepG2 Mito O-GlcNAc Proteins ==========\n")
+print(log2FC_data_Mito |> group_by(Gene) |> summarise(n = n(), mean_log2FC = mean(log2FC), .groups = "drop"))
+
+# Combine data
+log2FC_data_combined <- bind_rows(log2FC_data_PM, log2FC_data_Mito) |>
+  mutate(facet = factor(facet, levels = c("HEK293T PM", "HepG2 Mito")))
+
+# Create combined faceted plot
+figure5C <- log2FC_data_combined |>
+  ggplot(aes(x = log2FC, y = Gene, color = cell)) +
   geom_vline(xintercept = 0, color = "grey50", linetype = "solid", linewidth = 0.5) +
-  geom_jitter(height = 0.15, size = 2, alpha = 0.8, color = colors_cell["HEK293T"]) +
+  geom_jitter(height = 0.15, size = 2, alpha = 0.8) +
   stat_summary(fun = median, geom = "crossbar", width = 0.5, linewidth = 0.3, color = "black") +
+  scale_color_manual(values = colors_cell) +
   scale_x_continuous(limits = c(-2, 2)) +
+  facet_wrap(~ facet, scales = "free_y", ncol = 1) +
   labs(x = expression(log[2](Tuni/Ctrl)), y = "") +
   theme_bw() +
   theme(
     axis.title.x = element_text(size = 9),
     axis.text.x = element_text(color = "black", size = 9),
     axis.text.y = element_text(color = "black", size = 9),
+    strip.text = element_text(size = 9),
+    strip.background = element_blank(),
     legend.position = "none",
     panel.grid.minor = element_blank()
   )
@@ -811,78 +847,8 @@ figure5C <- log2FC_data_PM |>
 ggsave(
   filename = paste0(figure_file_path, 'Figure5/Figure5C.pdf'),
   plot = figure5C,
-  height = 1, width = 2, units = 'in'
+  height = 2, width = 2.5, units = 'in'
 )
 cat("Figure 5C saved\n")
 
-# Figure 5D - ER proteins (HepG2)
-selected_proteins_ER <- c("P14314", "Q15084", "Q8NBS9")
-
-log2FC_data_ER <- extract_log2FC_data(OGlcNAc_protein_norm_HepG2, "HepG2", selected_proteins_ER) |>
-  filter(!is.na(log2FC) & is.finite(log2FC))
-
-cat("\n========== Figure 5D: ER O-GlcNAc Proteins (HepG2) ==========\n")
-print(log2FC_data_ER |> group_by(Gene) |> summarise(n = n(), mean_log2FC = mean(log2FC), .groups = "drop"))
-
-gene_labels_ER <- log2FC_data_ER |> dplyr::select(Protein.ID, Gene) |> distinct()
-log2FC_data_ER <- log2FC_data_ER |> mutate(Gene = factor(Gene, levels = gene_labels_ER$Gene))
-
-figure5D <- log2FC_data_ER |>
-  ggplot(aes(x = log2FC, y = Gene)) +
-  geom_vline(xintercept = 0, color = "grey50", linetype = "solid", linewidth = 0.5) +
-  geom_jitter(height = 0.15, size = 2, alpha = 0.8, color = colors_cell["HepG2"]) +
-  stat_summary(fun = median, geom = "crossbar", width = 0.5, linewidth = 0.3, color = "black") +
-  scale_x_continuous(limits = c(-2.15, 2)) +
-  labs(x = expression(log[2](Tuni/Ctrl)), y = "") +
-  theme_bw() +
-  theme(
-    axis.title.x = element_text(size = 9),
-    axis.text.x = element_text(color = "black", size = 9),
-    axis.text.y = element_text(color = "black", size = 9),
-    legend.position = "none",
-    panel.grid.minor = element_blank()
-  )
-
-ggsave(
-  filename = paste0(figure_file_path, 'Figure5/Figure5D.pdf'),
-  plot = figure5D,
-  height = 1, width = 2, units = 'in'
-)
-cat("Figure 5D saved\n")
-
-# Figure 5E - Mitochondria proteins (HepG2)
-selected_proteins_Mito <- c("Q9H479", "P28331", "Q92667")
-
-log2FC_data_Mito <- extract_log2FC_data(OGlcNAc_protein_norm_HepG2, "HepG2", selected_proteins_Mito) |>
-  filter(!is.na(log2FC) & is.finite(log2FC))
-
-cat("\n========== Figure 5E: Mitochondria O-GlcNAc Proteins (HepG2) ==========\n")
-print(log2FC_data_Mito |> group_by(Gene) |> summarise(n = n(), mean_log2FC = mean(log2FC), .groups = "drop"))
-
-gene_labels_Mito <- log2FC_data_Mito |> dplyr::select(Protein.ID, Gene) |> distinct()
-log2FC_data_Mito <- log2FC_data_Mito |> mutate(Gene = factor(Gene, levels = gene_labels_Mito$Gene))
-
-figure5E <- log2FC_data_Mito |>
-  ggplot(aes(x = log2FC, y = Gene)) +
-  geom_vline(xintercept = 0, color = "grey50", linetype = "solid", linewidth = 0.5) +
-  geom_jitter(height = 0.15, size = 2, alpha = 0.8, color = colors_cell["HepG2"]) +
-  stat_summary(fun = median, geom = "crossbar", width = 0.5, linewidth = 0.3, color = "black") +
-  scale_x_continuous(limits = c(-2, 2)) +
-  labs(x = expression(log[2](Tuni/Ctrl)), y = "") +
-  theme_bw() +
-  theme(
-    axis.title.x = element_text(size = 9),
-    axis.text.x = element_text(color = "black", size = 9),
-    axis.text.y = element_text(color = "black", size = 9),
-    legend.position = "none",
-    panel.grid.minor = element_blank()
-  )
-
-ggsave(
-  filename = paste0(figure_file_path, 'Figure5/Figure5E.pdf'),
-  plot = figure5E,
-  height = 1, width = 2, units = 'in'
-)
-cat("Figure 5E saved\n")
-
-cat("\n=== Figure 5C-5E complete ===\n")
+cat("\n=== Figure 5C complete ===\n")
