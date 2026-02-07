@@ -45,7 +45,7 @@ site_files <- c(
 output_file <- "/Volumes/cos-lab-rwu60/Longping/OGlycoTM_Final_Version/data_source/supporting_tables/new_version/supporting_table_S7.xlsx"
 
 # =============================================================================
-# Define styles (same as S1-S4)
+# Define styles (same as S1-S6)
 # =============================================================================
 
 # Title row style: Times New Roman, 16, Bold, Blue (#0070C0), left-aligned
