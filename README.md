@@ -14,33 +14,32 @@ Data-analysis code and figures for:
   <img src="assets/table_of_contents.png" alt="Table of Contents graphic: metabolic labeling and multiplexed proteomics of O-GlcNAcylation in HEK293T, HepG2, and Jurkat cells under N-glycosylation inhibition, resolving common regulation, cell-type-specific responses, and site-specific structural analysis" width="720">
 </p>
 
-## Overview
+## Introduction
 
-Protein *O*-GlcNAcylation and *N*-glycosylation are two of the most abundant and functionally important glycosylation types in human cells, and both help regulate protein activity, stability, and signaling. *O*-GlcNAcylation — the reversible attachment of a single *N*-acetylglucosamine to serine, threonine, or tyrosine residues of nuclear and cytoplasmic proteins — is a well-established stress sensor, yet how it responds when *N*-glycosylation is perturbed had not been characterized comprehensively or at site-level resolution. Because the two modifications share a nucleotide-sugar precursor (UDP-GlcNAc) and *N*-glycosylation defects trigger ER stress, a crosstalk between them is expected but poorly mapped.
+Glycosylation is one of the most important and common protein modifications, and it plays vital roles in regulating protein activities and many cellular events. Unlike modifications with a single defined moiety, such as phosphorylation and acetylation, protein glycosylation encompasses structurally diverse modification types, including *N*-glycosylation, mucin-type *O*-glycosylation, and *O*-GlcNAcylation. Protein *O*-GlcNAcylation is a dynamic and reversible modification where a single monosaccharide, i.e., *N*-acetylglucosamine (GlcNAc), is bound to the serine, threonine, or tyrosine residue, predominantly on nuclear and cytoplasmic proteins. In contrast, protein *N*-glycosylation involves attachment of a preassembled core glycan to asparagine (Asn) residues in the ER, and this glycan is further elaborated in the ER and the Golgi apparatus, contributing to protein folding, trafficking, and regulation of many extracellular events.
 
-Here, we combined metabolic labeling, bioorthogonal chemistry, and multiplexed (TMT) proteomics to comprehensively and site-specifically quantify protein *O*-GlcNAcylation in three human cell types — **HEK293T, HepG2, and Jurkat** — while inhibiting *N*-glycosylation with **tunicamycin**. Across the cells, more than 1,000 *O*-GlcNAcylated proteins (1,109 total) were identified and quantified. The results reveal both a **common** program shared across cell types and distinct **cell-type-specific** responses to *N*-glycosylation inhibition, and further show that the **local structural context of an *O*-GlcNAc site** is a key determinant of how much it changes. This repository contains the code used to process the mass spectrometry results and generate every figure and supporting table in the paper.
+The established role of protein *O*-GlcNAcylation in cellular stress responses suggests potential crosstalk between protein *O*-GlcNAcylation and *N*-glycosylation because the *N*-glycosylation inhibition induces ER stress. However, comprehensive and quantitative analysis of protein *O*-GlcNAcylation under *N*-glycosylation perturbation across different cell types has yet to be reported. This repository provides the code used to process the mass spectrometry results and to generate the figures and supporting tables reported in the paper.
 
-## Highlights
+## Abstract
 
-- **Dual-modification-resolved workflow.** Metabolic labeling with Ac₄GalNAz, click-chemistry enrichment, and a galactose-oxidase (GAO) step chemically separate *O*-GlcNAc (+528.2859 Da) from *O*-GalNAc / Tn antigen (+555.2968 Da), a 27 Da mass shift that lets the two structurally similar modifications be distinguished and quantified by MS.
-- **1,109 *O*-GlcNAcylated proteins** identified and quantified across HEK293T, HepG2, and Jurkat cells, with 402 commonly detected in all three.
-- **Common response to *N*-glycosylation inhibition.** Commonly up-regulated *O*-GlcNAcylated proteins are enriched for translation regulation, glucose response, and RNA splicing; commonly down-regulated ones are enriched for stress-granule assembly and stress-response regulation.
-- **Cell-type-specific response.** In Jurkat cells, up-regulated *O*-GlcNAcylated proteins map to leukocyte proliferation, adhesion, and T-cell activation; in HEK293T cells they map to chaperone-mediated folding, cell-cycle, ribonucleotide metabolism, and ribosome biogenesis.
-- **Site structure matters.** *O*-GlcNAcylation sites in structured protein regions undergo significantly larger abundance changes than sites in intrinsically disordered regions (IDRs), which stayed largely unaffected — suggesting structured-region sites are more responsive to cellular perturbation.
+> Both protein *O*-GlcNAcylation and *N*-glycosylation are extremely important in human cells and regulate many cellular events. While *O*-GlcNAcylation is known to act as a stress sensor, its changes in human cells with *N*-glycosylation perturbations remain to be explored. In this study, we comprehensively and site-specifically studied common and cell-type-specific responses of protein *O*-GlcNAcylation under *N*-glycosylation inhibition in three types of human cells (HEK293T, HepG2, and Jurkat cells) by integrating metabolic labeling, bio-orthogonal chemistry, and multiplexed proteomics. In total, more than 1000 *O*-GlcNAcylated proteins were identified and quantified, and the results demonstrate that under the inhibition of protein *N*-glycosylation, *O*-GlcNAcylated proteins related to stress response and translation are commonly changed in different types of cells. Furthermore, *O*-GlcNAcylation changes are cell-type-specific, and *O*-GlcNAcylated proteins related to leukocyte proliferation and T-cell activation were upregulated in Jurkat cells, while in HEK293T cells, those associated with ribonucleotide metabolism and ribosome biogenesis were upregulated. Site-specific analysis revealed that *O*-GlcNAcylation sites in structured regions exhibited larger abundance changes compared with those in intrinsically disordered regions. This study provides valuable insights into the regulation of protein *O*-GlcNAcylation in human cells under *N*-glycosylation inhibition, advancing our understanding of protein glycosylation.
 
-## Method at a glance
+## Key findings
 
-```
-Metabolic labeling & treatment   HEK293T / HepG2 / Jurkat  +  tunicamycin (N-glyco inhibition)  +  Ac4GalNAz
-        │
-Click chemistry & enrichment     CuAAC → Photocleavable-Biotin-Alkyne → NeutrAvidin capture → photocleavage (365 nm)
-        │
-TMT labeling & GAO oxidation     TMT multiplexing; galactose oxidase distinguishes O-GlcNAc (+528.2859) vs O-GalNAc (+555.2968)
-        │
-LC-MS/MS                         High-pH HPLC (12 fractions) → Orbitrap Eclipse Tribrid, HCD-pd-EThcD
-        │
-Database search & analysis       FragPipe + O-Pair Search → differential analysis (|log2(Tuni/Ctrl)| > 0.5, adj. P < 0.05)
-```
+- Under the inhibition of protein *N*-glycosylation in cells using tunicamycin (Tm), a total of **1,109 *O*-GlcNAcylated proteins** were characterized across three types of human cells (HEK293T, HepG2, and Jurkat cells).
+- Commonly upregulated *O*-GlcNAcylated proteins were enriched in translation regulation and glucose response, whereas commonly downregulated proteins were associated with stress granule assembly and stress response regulation.
+- *O*-GlcNAcylation changes are cell-type-specific: *O*-GlcNAcylated proteins related to leukocyte proliferation and T-cell activation were upregulated in Jurkat cells, while in HEK293T cells, those associated with ribonucleotide metabolism and ribosome biogenesis were upregulated.
+- Local structures of *O*-GlcNAcylation sites are a key determinant of their changes. *O*-GlcNAcylation sites in structured regions show significantly higher abundance changes compared with those in intrinsically disordered regions (IDRs), where *O*-GlcNAcylation sites remained largely unaffected.
+
+## Experimental workflow
+
+Protein *O*-GlcNAcylation was quantified in a site-specific manner by mass spectrometry, integrating metabolic labeling, bio-orthogonal chemistry, and multiplexed proteomics (Figure 1 of the paper):
+
+1. **Metabolic labeling and treatment.** HEK293T, HepG2, and Jurkat cells were treated with tunicamycin (Tm) — an antibiotic that specifically blocks the first step of protein *N*-glycosylation by inhibiting *N*-acetylglucosamine-1-phosphate transferase — and then supplemented with the sugar analog Ac₄GalNAz (200 μM) to label *O*-GlcNAcylated proteins.
+2. **Click chemistry, enrichment, and elution.** Azide-labeled proteins were tagged with Photocleavable (PC) Biotin Alkyne through the copper(I)-catalyzed azide–alkyne cycloaddition (CuAAC) reaction. After tryptic digestion, glycopeptides were enriched on NeutrAvidin agarose resin and released under radiation (365 nm).
+3. **TMT labeling and GAO oxidation.** Glycopeptides were labeled with TMT reagents. Galactose oxidase (GAO) oxidizes the Tn antigen but not *O*-GlcNAc, followed by methoxylamine labeling to selectively derivatize *O*-GalNAcylated peptides, giving dramatically different mass tags (528.2859 vs 555.2968). This mass shift of 27 Da allows *O*-GlcNAcylated and *O*-GalNAcylated proteins to be clearly distinguished and confidently analyzed by MS.
+4. **LC-MS/MS.** TMT-labeled peptides were separated by high-pH HPLC into 12 fractions and analyzed on an Orbitrap Eclipse Tribrid mass spectrometer using a higher-energy collisional dissociation product-dependent-electron-transfer/higher-energy collisional dissociation (HCD-pd-EThcD) fragmentation strategy.
+5. **Database searching and analysis.** Peptide identification and *O*-glycosylation site localization were performed using FragPipe with O-Pair Search. Glycopeptides and glycoproteins that exhibited |log₂(Tuni/Ctrl)| > 0.5 and adjusted *P* value (Benjamini–Hochberg) < 0.05 were considered significantly regulated.
 
 ## Repository structure
 
@@ -69,9 +68,9 @@ OGlycoTM/
 
 ## Data availability
 
-The mass spectrometry proteomics data have been deposited to the ProteomeXchange Consortium via the **PRIDE** partner repository under the dataset identifier **[PXD073249](https://www.ebi.ac.uk/pride/archive/projects/PXD073249)**.
+The MS proteomics data were deposited to the ProteomeXchange Consortium via the PRIDE partner repository with the data set identifier **[PXD073249](https://www.ebi.ac.uk/pride/archive/projects/PXD073249)**.
 
-Per-cell-type identifications and abundance changes for *O*-GlcNAcylated proteins, *O*-GlcNAc sites, *O*-GalNAcylated proteins, and the whole proteome are provided as supporting-information tables with the published article.
+Identification and abundance changes of *O*-GlcNAcylated proteins, *O*-GlcNAcylation sites, *O*-GalNAcylated proteins, and the total proteins (whole proteome) in HEK293T, HepG2, and Jurkat cells are provided as Supporting Information tables with the published article.
 
 ## Citation
 
