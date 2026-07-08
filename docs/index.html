@@ -1,0 +1,217 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>OGlycoTM · O-GlcNAcylation under N-glycosylation inhibition</title>
+<meta name="description" content="Interactive data browser for Fu et al., Anal. Chem. 2026 — systematic, site-specific quantification of protein O-GlcNAcylation under N-glycosylation inhibition in HEK293T, HepG2, and Jurkat cells.">
+<meta property="og:title" content="OGlycoTM data browser">
+<meta property="og:description" content="Explore O-GlcNAc / O-GalNAc / whole-proteome changes under tunicamycin across three human cell types.">
+<meta property="og:type" content="website">
+<link rel="stylesheet" href="https://unpkg.com/tabulator-tables@6.3.0/dist/css/tabulator.min.css">
+<link rel="stylesheet" href="css/style.css">
+<script>try{var w=localStorage.getItem('og-nav-w');if(w)document.documentElement.style.setProperty('--nav-w',w);}catch(e){}</script>
+</head>
+<body data-theme="light">
+
+<div id="app">
+
+  <!-- ============ Sidebar ============ -->
+  <aside class="sidebar" id="sidebar">
+    <div class="brand">
+      <a href="#overview" class="brand-mark" aria-label="OGlycoTM home">
+        <span class="brand-glyph" aria-hidden="true"></span>
+        <span class="brand-text">OGlyco<b>TM</b></span>
+      </a>
+      <button class="nav-toggle" id="nav-toggle" aria-label="Toggle navigation">≡</button>
+    </div>
+
+    <div class="search">
+      <label class="search-label" for="gene-search">Look up a protein</label>
+      <input id="gene-search" type="search" autocomplete="off" spellcheck="false"
+             placeholder="Gene / UniProt · PRDX6">
+      <div id="search-results" class="search-results" role="listbox" hidden></div>
+    </div>
+
+    <nav class="nav" id="nav">
+      <a href="#overview"          data-view="overview">Overview</a>
+      <a href="#oglcnac-proteins"  data-view="oglcnac-proteins"><i class="dot og"></i>O-GlcNAc proteins</a>
+      <a href="#oglcnac-sites"     data-view="oglcnac-sites"><i class="dot og"></i>O-GlcNAc sites</a>
+      <a href="#ogalnac"           data-view="ogalnac"><i class="dot ga"></i>O-GalNAc</a>
+      <a href="#proteome"          data-view="proteome">Whole proteome</a>
+      <a href="#spectra"           data-view="spectra">Spectra</a>
+      <a href="#downloads"         data-view="downloads">Data &amp; downloads</a>
+    </nav>
+
+    <div class="sidebar-foot">
+      <a href="https://doi.org/10.1021/acs.analchem.6c00972" target="_blank" rel="noopener">Article ↗</a>
+      <a href="https://www.ebi.ac.uk/pride/archive/projects/PXD073249" target="_blank" rel="noopener">PRIDE PXD073249 ↗</a>
+      <a href="https://github.com/lfu46/OGlycoTM" target="_blank" rel="noopener" id="repo-link">Code ↗</a>
+      <p class="cite">Fu, Yin, Xu &amp; Wu · <i>Anal. Chem.</i> 2026, 98, 15689–15699</p>
+    </div>
+  </aside>
+  <div class="sidebar-resizer" id="sidebar-resizer" title="Drag to resize · double-click to reset" aria-hidden="true"></div>
+
+  <!-- ============ Main ============ -->
+  <main id="main">
+
+    <!-- ---- Overview ---- -->
+    <section id="view-overview" class="view">
+      <header class="hero">
+        <p class="eyebrow">Analytical Chemistry 2026, 98, 15689–15699</p>
+        <h1 class="hero-title">Systematic Quantification of Protein
+          <span class="ink-og"><i>O</i>-GlcNAcylation</span> Reveals Common and
+          Cell-Type-Specific Responses to <span class="ink-ga"><i>N</i>-Glycosylation</span>
+          Inhibition in Human Cells</h1>
+        <p class="hero-authors">Longping Fu, Kejun Yin, Xing Xu, and Ronghu Wu
+          <span class="aff">· School of Chemistry and Biochemistry, Georgia Institute of Technology</span></p>
+        <p class="hero-sub">
+          Both protein <i>O</i>-GlcNAcylation and <i>N</i>-glycosylation are extremely important in human
+          cells and regulate many cellular events. While <i>O</i>-GlcNAcylation is known to act as a stress
+          sensor, its changes in human cells with <i>N</i>-glycosylation perturbations remain to be explored.
+          In this study, we comprehensively and site-specifically studied common and cell-type-specific
+          responses of protein <i>O</i>-GlcNAcylation under <i>N</i>-glycosylation inhibition in three types
+          of human cells (HEK293T, HepG2, and Jurkat cells) by integrating metabolic labeling, bio-orthogonal
+          chemistry, and multiplexed proteomics.
+        </p>
+
+        <div class="hero-volc" id="hero-volc">
+          <figure class="volc-cell" data-cell="HEK293T"><figcaption>HEK293T</figcaption><div class="volc-mini" id="hv-HEK293T"></div></figure>
+          <figure class="volc-cell" data-cell="HepG2"><figcaption>HepG2</figcaption><div class="volc-mini" id="hv-HepG2"></div></figure>
+          <figure class="volc-cell" data-cell="Jurkat"><figcaption>Jurkat</figcaption><div class="volc-mini" id="hv-Jurkat"></div></figure>
+        </div>
+        <p class="volc-caption">
+          Each point is an <i>O</i>-GlcNAcylated protein. <span class="lg up">Red</span> = up under Tm,
+          <span class="lg down">blue</span> = down (|log₂FC| &gt; 0.5, adj. <i>P</i> &lt; 0.05).
+          Click any panel to open the full browser.
+        </p>
+      </header>
+
+      <div class="stat-strip" id="stat-strip"><!-- populated --></div>
+
+      <section class="overview-cards">
+        <article class="ocard">
+          <h3>Common response</h3>
+          <p>Under the inhibition of protein <i>N</i>-glycosylation, <i>O</i>-GlcNAcylated proteins related to
+             stress response and translation are commonly changed in different types of cells.</p>
+        </article>
+        <article class="ocard">
+          <h3>Cell-type specificity</h3>
+          <p><i>O</i>-GlcNAcylated proteins related to leukocyte proliferation and T-cell activation were
+             upregulated in Jurkat cells, while in HEK293T cells, those associated with ribonucleotide
+             metabolism and ribosome biogenesis were upregulated.</p>
+        </article>
+        <article class="ocard">
+          <h3>Local structure</h3>
+          <p>Site-specific analysis revealed that <i>O</i>-GlcNAcylation sites in structured regions exhibited
+             larger abundance changes compared with those in intrinsically disordered regions.</p>
+        </article>
+      </section>
+    </section>
+
+    <!-- ---- O-GlcNAc proteins ---- -->
+    <section id="view-oglcnac-proteins" class="view" hidden>
+      <div class="view-head">
+        <h2><i class="dot og"></i>O-GlcNAc proteins</h2>
+        <p class="view-sub">Tunicamycin vs. control, per cell type. Click a row for its TMT profile.</p>
+      </div>
+      <div class="takeaway"><span class="tk-label">From the paper</span>Under <i>N</i>-glycosylation inhibition, <i>O</i>-GlcNAcylated proteins related to stress response and translation are commonly changed across the three cell types, while the responses of protein <i>O</i>-GlcNAcylation are also highly specific to individual cell types.</div>
+      <div class="cell-tabs" data-target="ogp"></div>
+      <div class="split">
+        <div class="split-plot"><div id="ogp-volcano" class="plot"></div><div id="ogp-detail" class="detail-panel"></div></div>
+        <div class="split-table"><div id="ogp-table"></div></div>
+      </div>
+    </section>
+
+    <!-- ---- O-GlcNAc sites ---- -->
+    <section id="view-oglcnac-sites" class="view" hidden>
+      <div class="view-head">
+        <h2><i class="dot og"></i>O-GlcNAc sites</h2>
+        <p class="view-sub">Site-level changes with structural context. Select a site to view it on its AlphaFold model.</p>
+      </div>
+      <div class="takeaway"><span class="tk-label">From the paper</span>Site-specific analysis revealed that <i>O</i>-GlcNAcylation sites in structured regions exhibited larger abundance changes compared with those in intrinsically disordered regions.</div>
+      <div class="cell-tabs" data-target="ogs"></div>
+      <div class="site-grid">
+        <div class="site-plot"><div id="ogs-struct" class="plot"></div>
+          <p class="plot-note">log₂FC by local structure — structured-region sites (helix/sheet) vs. intrinsically disordered.</p>
+        </div>
+        <div class="site-struct">
+          <div id="ngl-stage" class="ngl-stage"></div>
+          <div id="ngl-caption" class="ngl-caption">Select a site to load its AlphaFold structure.</div>
+        </div>
+        <div class="site-table-wrap"><div id="ogs-table"></div></div>
+      </div>
+    </section>
+
+    <!-- ---- O-GalNAc ---- -->
+    <section id="view-ogalnac" class="view" hidden>
+      <div class="view-head">
+        <h2><i class="dot ga"></i>O-GalNAc</h2>
+        <p class="view-sub">Mucin-type <i>O</i>-GalNAc proteins and sites captured alongside <i>O</i>-GlcNAc.</p>
+      </div>
+      <div class="takeaway ga"><span class="tk-label">From the paper</span>A total of 485 <i>O</i>-GalNAcylated (Tn antigen) proteins were captured across the three cell types. Under <i>N</i>-glycosylation inhibition, the abundance of <i>O</i>-GalNAcylated proteins in the classical secretory pathway decreased, and these downregulated proteins were involved in ER proteostasis, glycoprotein maturation, and receptor regulation.</div>
+      <div class="level-tabs" id="ga-level-tabs">
+        <button data-level="protein" class="on">Proteins</button>
+        <button data-level="site">Sites</button>
+      </div>
+      <div class="cell-tabs" data-target="ga"></div>
+      <div class="split">
+        <div class="split-plot"><div id="ga-volcano" class="plot"></div><div id="ga-detail" class="detail-panel"></div></div>
+        <div class="split-table"><div id="ga-table"></div></div>
+      </div>
+    </section>
+
+    <!-- ---- Whole proteome ---- -->
+    <section id="view-proteome" class="view" hidden>
+      <div class="view-head">
+        <h2>Whole proteome</h2>
+        <p class="view-sub">Total protein-abundance change — the background against which glyco changes are read. Loaded on demand.</p>
+      </div>
+      <div class="cell-tabs" data-target="wp"></div>
+      <div id="wp-loading" class="loading-box">Loading whole-proteome data…</div>
+      <div class="split" id="wp-split" hidden>
+        <div class="split-plot"><div id="wp-volcano" class="plot"></div><div id="wp-detail" class="detail-panel"></div></div>
+        <div class="split-table"><div id="wp-table"></div></div>
+      </div>
+    </section>
+
+    <!-- ---- Spectra ---- -->
+    <section id="view-spectra" class="view" hidden>
+      <div class="view-head">
+        <h2>Annotated spectra</h2>
+        <p class="view-sub">Representative HCD / EThcD glycopeptide spectra behind the localized sites. The full set is on PRIDE.</p>
+      </div>
+      <div id="spectra-gallery" class="spectra-gallery"></div>
+    </section>
+
+    <!-- ---- Downloads ---- -->
+    <section id="view-downloads" class="view" hidden>
+      <div class="view-head"><h2>Data &amp; downloads</h2>
+        <p class="view-sub">Everything here is derived from the deposited data and the published Supporting Information.</p></div>
+      <div id="downloads-body" class="downloads"></div>
+    </section>
+
+  </main>
+</div>
+
+<!-- ============ Gene passport modal ============ -->
+<div id="passport" class="passport-overlay" hidden>
+  <div class="passport-card" role="dialog" aria-modal="true" aria-labelledby="pp-gene">
+    <button class="passport-close" id="passport-close" aria-label="Close">×</button>
+    <div id="passport-body"></div>
+  </div>
+</div>
+
+<!-- ============ Libraries ============ -->
+<script src="https://cdn.plot.ly/plotly-2.35.2.min.js" charset="utf-8"></script>
+<script src="https://unpkg.com/tabulator-tables@6.3.0/dist/js/tabulator.min.js"></script>
+<script src="https://unpkg.com/ngl@2.3.1/dist/ngl.js"></script>
+
+<!-- ============ App ============ -->
+<script src="js/config.js" defer></script>
+<script src="js/data.js" defer></script>
+<script src="js/charts.js" defer></script>
+<script src="js/views.js" defer></script>
+<script src="js/app.js" defer></script>
+</body>
+</html>

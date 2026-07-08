@@ -39,8 +39,9 @@ vignettes/*.pdf
 # R Environment Variables
 .Renviron
 
-# pkgdown site
-docs/
+# pkgdown site (not used here). docs/ hosts the interactive data browser
+# published via GitHub Pages, so it must be tracked.
+# docs/
 
 # translation temp files
 po/*~
@@ -101,3 +102,7 @@ rsconnect/
 
 # Ingore PDF files
 *.pdf
+
+# Keep the assets served by the docs/ data browser (override the type-ignores above)
+!docs/tables/*.xlsx
+!docs/spectra/*.png
