@@ -1,6 +1,6 @@
-# CLAUDE.md
+# AGENTS.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+This file provides guidance to Codex (Codex.ai/code) when working with code in this repository.
 
 ## Project Overview
 
@@ -88,17 +88,14 @@ All data files (CSV, TSV, XLSX) are in .gitignore. Data is stored on external ne
 ## Figure Scripts
 
 Each figure script can run independently by sourcing `data_source.R` or `data_source_DE.R` first:
-- **Figure2.R** - O-GlcNAc identification overview (Euler diagrams, site distribution). **Output path: `Figure2_new/`** (not `Figure2/`). Has devEMF::emf() blocks for EMF export alongside PDF.
+- **Figure2.R** - O-GlcNAc identification overview (Euler diagrams, site distribution)
 - **Figure3.R** - Differential expression analysis (volcano plots, heatmaps)
-- **Figure4.R** - Cell-type specific analysis (circular heatmaps, GO enrichment). Has devEMF::emf() blocks for EMF export alongside PDF.
-- **Figure5.R** - ~~Subcellular localization analysis~~ **REMOVED in Mar 2026 revision** (see Revision Notes below). Old Figure 6 becomes new Figure 5.
-- **Figure6.R → Figure5.R (revised)** - Structural feature analysis (logFC distribution, secondary structure, IDR effects, site-specific examples)
+- **Figure4.R** - Cell-type specific analysis (circular heatmaps, GO enrichment)
+- **Figure5.R** - Removed in the Mar 2026 revision. The old subcellular localization analysis was deleted because protein compartment assignment was not robust enough for reviewer-facing interpretation.
+- **Figure6.R -> revised Figure 5** - O-GlcNAc site-level structural analysis (logFC distribution, secondary structure, IDR effects, site-specific examples)
+- **Figure6_OGalNAc outputs / revised Figure 6** - O-GalNAc quantification and enrichment analysis added during the Mar 2026 revision
 
-**Figure delivery workflow (decided 2026-04-05):** Do NOT attempt EMF-for-editable-PPT. devEMF on macOS has multiple cross-platform issues (text as polygons, PLGBLT raster tiles for rotated elements, font metric mismatches). Deliver figures as TIFF/PDF. Change requests come back as text/markup; apply them by editing the R/Python source and re-exporting, never by editing the exported figure. Both Anal. Chem. and MCP accept TIFF (300 dpi RGB minimum), PDF, and EPS.
-
-**CAUTION:** Do NOT `source("Figure2.R")` or `source("Figure4.R")` in full to regenerate a single panel — these scripts contain `enrichGO()` calls that take 5+ minutes. Instead, write a small driver script that loads the cached enrichment CSVs from `source_file_path/enrichment/` and rebuilds only the panel you need.
-
-## PyMOL 3D Structure Visualization (Figure 5E/5F, formerly 6E/6F)
+## PyMOL 3D Structure Visualization (Figure 5E/5F in revised numbering)
 
 PyMOL scripts for protein structure visualization with O-GlcNAc site highlighting:
 - **Figure6E_*_pymol.py** - Candidate structured region sites (DDX50_Y492, PWP2_T23, PRDX6_T95, PRDX6_Y89)
@@ -125,45 +122,27 @@ PyMOL ray trace modes:
 
 ## MS/MS Spectrum Annotation (Python)
 
-**CRITICAL: ALWAYS use `mzml_utils.MzMLReader` for spectrum access — NEVER `pyteomics.mzml` (streaming, extremely slow). Always check for cached data (pickles, filter_string_cache.csv) before opening mzML files.**
+Use **GlycoSpectrumAnnotator** (`spectrum_annotator_ddzby`, installed as editable package at `/Users/longpingfu/Downloads/GlycoSpectrumAnnotator/`) for all new annotation work. The local `spectrum_annotator.py` is outdated and should not be the default tool.
 
-**Use GlycoSpectrumAnnotator** (`spectrum_annotator_ddzby`, installed as editable package at `/Users/longpingfu/Downloads/GlycoSpectrumAnnotator/`) for all new annotation. The local `spectrum_annotator.py` is outdated.
-
-Python modules for spectrum annotation:
-- **mzml_utils** (`import mzml_utils`) - Indexed mzML reader (`MzMLReader`), ion search, fragment calculator, deisotoping, spectral similarity, protease digestion
-- **GlycoSpectrumAnnotator** (`spectrum_annotator_ddzby`) - Publication-quality annotated spectra with correct butterfly diagram, glycan labels, deisotoping, S/N filtering, charge-reduced exclusion
-- **OGlyco_DBA tools** (`/Users/longpingfu/Downloads/OGlyco_DBA/data_analysis/`) - `opair_utils.py`, `oglyco_validation.py`, `mass_degeneracy.py` for validation workflows
+Python modules for EThcD spectrum extraction and annotation:
+- **GlycoSpectrumAnnotator** (`spectrum_annotator_ddzby`) - Publication-quality annotated spectra with correct butterfly layout, glycan labels, deisotoping controls, S/N filtering, and charge-reduced precursor exclusion
+- **fragment_calculator.py** - Calculates theoretical m/z for b/y/c/z ions with modifications
 - **extract_ethcd_spectra.py** - Extracts EThcD spectra from calibrated mzML files
 
-```python
-from spectrum_annotator_ddzby import SpectrumAnnotator
-from spectrum_annotator_ddzby.fragment_calculator import load_noise_cache
-
-# Key parameters for annotation:
-annotator = SpectrumAnnotator(
-    peptide=peptide, modifications=mods,
-    precursor_charge=charge, precursor_mz=obs_mz,
-    exp_mz=mz, exp_intensity=intensity,
-    tolerance_ppm=20.0,
-    activation_type='EThcD',  # or 'HCD'
-    do_deisotope=False,       # NO MS2 deisotoping (matches MSFragger behavior)
-    scan_num=scan,
-    sn_threshold=0.0,         # 0.0 for manual validation, 5.0 for automated
-    confidence_level='Level1', # shown in title
-)
+```bash
+# Run spectrum extraction from calibrated mzML files first
+python extract_ethcd_spectra.py
 ```
 
-**Critical annotation rules (updated 2026-03-26):**
-- Use **calibrated mzML** files for annotation (MSFragger output), NOT raw-converted mzML
-- OPair modification masses: check `Assigned.Modifications` per PSM (299.123 vs 528.286 for HexNAc)
-- CAM: only add if explicitly listed in `Assigned.Modifications`
-- **Bare b/y ions cannot localize glycosites in HCD** — need glycan-retaining ions (EThcD c/z)
-- For manual validation: MS1 (isolation + mass accuracy) → HCD (oxonium + sequence) → EThcD (localization)
-- **z-ions use z+H (even-electron) formula**, NOT z• (radical). Matches MSFragger. Δ = 1.007 Da.
-- **No MS2 deisotoping** (`do_deisotope=False`) — matches MSFragger behavior
-- **No isotope matching** — prevents c/z complementary ion overlap artifacts
-- **Residue-specific neutral losses**: H2O only for S/T/D/E; NH3 only for R/K/N/Q; CO2 removed
-- **EThcD TMT quantification**: use paired HCD scan reporters (same precursor, higher NCE yield). Script: `fix_ogalnac_site_quant.py`
+Key annotation rules:
+- Use **calibrated mzML** files for annotation, not raw-converted mzML
+- Check `Assigned.Modifications` per PSM for the correct HexNAc mass (`299.1230` vs `528.2859`)
+- Add CAM only if it is explicitly present in `Assigned.Modifications`
+- Bare b/y ions are not sufficient for confident glycosite localization in HCD; use glycan-retaining c/z evidence from EThcD for localization claims
+- For manual validation, follow: MS1 (isolation + mass accuracy) -> HCD (oxonium + sequence support) -> EThcD (site localization)
+- Use `do_deisotope=False` to match MSFragger behavior
+- z ions use the even-electron `z+H` formula, not radical `z.`
+- For EThcD TMT quantification, use paired HCD reporter scans when needed; see `fix_ogalnac_site_quant.py`
 
 ### False Match Rate Calculation
 
@@ -193,37 +172,6 @@ Spectrum data locations:
 - EThcD ranked files: `data_source/point_to_point_response/OGlcNAc_Level1_{cell_type}_EThcD_ranked.csv`
 - Extracted spectra: `data_source/point_to_point_response/{cell_type}_ethcd_spectra/`
 
-### Annotated spectrum folders (latest versions):
-- **Tyr O-GlcNAc v5**: `Figures/Tyr_OGlcNAc_spectra_v5/{site}/` (4 selected sites: PRDX6_Y89, DDX17_Y580, HPRT1_Y105, SON_Y270) — MS1+HCD+EThcD+EMF
-- **OGalNAc selected v2**: `Figures/OGalNAc_selected_spectra_v2/{site}/` (7 Jurkat sites) — MS1+HCD+EThcD
-- **OGalNAc dropped protein check**: `Figures/OGalNAc_dropped_protein_check/` (11 proteins with zero/missing TMT)
-- **OGalNAc nonsecretory check**: `Figures/OGalNAc_nonsecretory_check/` (101 HEK non-secretory EThcD PSMs) — MS1+HCD+EThcD
-- **OGalNAc Level1/1b**: `Figures/OGalNAc_Level1_spectra/{cell}/` (1064 spectra), EThcD in `EThcD_only/`
-- **ER/Golgi/PM v2**: `Figures/OGlcNAc_ER_Golgi_PM_spectra_v2/{cell}/{Level}/` (332 spectra), N-sequon in `N_sequon/`
-- **Response figures**: `Figures/Response_Figures/` — Fig R1A (ER/Golgi/PM sequon analysis), Fig R1B (N-GlcNAc peptide overlap Venn: 6/289 = 2.1%)
-
-### Spectrum annotator updates (Mar 29 2026):
-- **c−NH3 removed**: c_n − NH3 = b_n identical mass, no longer generated as neutral loss
-- **Clean labels**: single highest-priority label per peak, no "/" concatenation for overlapping ions
-- **Y-ladder opt-in**: `extended_y_series=False` default globally; set `True` for natural complex glycans
-- These changes are in the installed GlycoSpectrumAnnotator at `/Users/longpingfu/Downloads/GlycoSpectrumAnnotator/`
-
-### O-GalNAc data (EThcD TMT fix applied at both site and protein level):
-- Site PSMs: `data_source/site/OGalNAc_site_{cell}.csv` (originals backed up as `*_original.csv`)
-- Filtered: `data_source/filtered/OGalNAc_{cell}.csv` (backups: `*_before_ethcd_fix.csv`)
-- Site quant/norm: `data_source/quantification/OGalNAc_site_quant_{cell}.csv`, `normalization/OGalNAc_site_norm_{cell}.csv`
-- Site DE (limma): `data_source/differential_analysis/OGalNAc_site_DE_{cell}.csv`
-- Protein DE (limma): `data_source/differential_analysis/OGalNAc_protein_DE_{cell}.csv`
-- Fix scripts: `fix_ogalnac_site_quant.py` (site), `regenerate_ogalnac_spectra.py` + inline (protein-level)
-
-### O-GalNAc secretory classification:
-- UniProt features: `data_source/reference/uniprot_features_OGalNAc.json` (485 proteins, full API JSON)
-- Parsed features: `data_source/reference/uniprot_positional_features_OGalNAc.tsv`
-- Site annotations: `data_source/annotation/OGalNAc_site_nielsen_regions.csv` (Nielsen et al. 2022 framework)
-- **Secretory** = UniProt signal peptide OR transmembrane helix (following Steentoft EMBO J 2013)
-- 31% secretory, 69% non-secretory across all O-GalNAc proteins — non-secretory enriched in O-GlcNAc functions
-- Enrichment results: `data_source/enrichment/OGalNAc_{HepG2,Jurkat}_exclusive_GO.csv`, `OGalNAc_exclusive_GSEA_*_Jurkat.csv`
-
 ## Common Data Variables
 
 After sourcing `data_source_DE.R`, these key variables are available:
@@ -248,6 +196,15 @@ After sourcing `data_source_DE.R`, these key variables are available:
 The Anal. Chem. revision record and cohort-talk notes live in `REVISION_NOTES.local.md`, which is
 gitignored because this repository is public. Read that file before answering manuscript,
 figure-choice, or reviewer-response questions.
+
+## PowerPoint Editing with python-pptx
+
+`python-pptx` can make targeted edits to an existing deck, but do not overstate safety:
+- Always open the latest existing `.pptx` and save as a new version. Do not rebuild from a template unless explicitly asked.
+- Prefer run-level text edits (`paragraph.runs`) to preserve font, bold/italic, color, and other rich text formatting.
+- Avoid assigning to `shape.text` or replacing an entire text frame for small edits; that strips run-level formatting in the affected box.
+- Preserve existing coordinates and dimensions unless the user asks for layout changes.
+- Untouched package parts, notes, and media generally remain intact, but `python-pptx` does not manage animations/transitions. Verify animated or complex slides in PowerPoint after editing.
 
 ## Markdown to PDF Conversion
 
@@ -296,7 +253,7 @@ Note: Requires ImageMagick (`brew install imagemagick`). 600 DPI TIFFs are large
 
 ## PDF to Text Extraction (Token-Efficient)
 
-Extract text from PDF files for uploading to Claude Desktop (avoids image tokens):
+Extract text from PDF files for uploading to Codex Desktop (avoids image tokens):
 
 ```bash
 # Requires poppler: brew install poppler

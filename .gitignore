@@ -52,6 +52,10 @@ rsconnect/
 # Ignore DS_Store files
 *.DS_Store
 
+# Python bytecode caches
+__pycache__/
+*.pyc
+
 # Ignore CSV, TSV, XLSX, XLS, TXT files
 *.csv
 *.tsv
@@ -106,3 +110,15 @@ rsconnect/
 # Keep the assets served by the docs/ data browser (override the type-ignores above)
 !docs/tables/*.xlsx
 !docs/spectra/*.png
+
+# Internal working notes — deliberately NOT published.
+# This repository is public and attached to a published paper. The files below hold advisor
+# decisions, reviewer-response strategy, and data caveats that are not stated in the article.
+# They are backed up by the drive archives, not by git:
+#   /Volumes/cos-lab-rwu60/Longping/OGlycoTM_Final_Version/Manuscript_Archive/
+#   /Volumes/Expansion/Longping/OGlycoTM/
+*.local.md
+/Manuscript/
+/.claude/
+/poster_revision_prompt.md
+/poster_text_revisions.md
