@@ -256,22 +256,36 @@ lgd_adjpval <- Legend(title = "adj.P.Value", col_fun = col_adjpval, at = c(0, 0.
 # Create and save the circular heatmap
 dir.create(paste0(figure_file_path, "Figure4"), showWarnings = FALSE)
 
+plot_figure4A <- function() {
+  plot.new()
+  circle_size <- unit(0.95, "snpc")
+  pushViewport(viewport(x = 0, y = 0.5, width = circle_size, height = circle_size, just = c("left", "center")))
+  par(omi = gridOMI(), new = TRUE)
+  circlize_plot()
+  upViewport()
+
+  h <- dev.size()[2]
+  lgd_list <- packLegend(lgd_mat, lgd_cell, lgd_category, lgd_adjpval, max_height = unit(0.98 * h, "inch"), gap = unit(1.5, "mm"))
+  draw(lgd_list, x = unit(0.78, "npc"), just = "left")
+}
+
 pdf(file = paste0(figure_file_path, "Figure4/Figure4A.pdf"), width = 5, height = 4)
-
-plot.new()
-circle_size <- unit(0.95, "snpc")
-pushViewport(viewport(x = 0, y = 0.5, width = circle_size, height = circle_size, just = c("left", "center")))
-par(omi = gridOMI(), new = TRUE)
-circlize_plot()
-upViewport()
-
-h <- dev.size()[2]
-lgd_list <- packLegend(lgd_mat, lgd_cell, lgd_category, lgd_adjpval, max_height = unit(0.98 * h, "inch"), gap = unit(1.5, "mm"))
-draw(lgd_list, x = unit(0.78, "npc"), just = "left")
-
+plot_figure4A()
 dev.off()
 
-cat("\nFigure 4A saved to:", figure_file_path, "Figure4/\n")
+# EMF for editable import into PowerPoint
+devEMF::emf(
+  file = paste0(figure_file_path, "Figure4/Figure4A.emf"),
+  width = 5, height = 4,
+  family = "Arial",
+  coordDPI = 300,
+  emfPlus = FALSE,
+  emfPlusFontToPath = FALSE
+)
+plot_figure4A()
+dev.off()
+
+cat("\nFigure 4A saved to:", figure_file_path, "Figure4/Figure4A.pdf and .emf\n")
 
 # =============================================================================
 # Figure 4B - Jurkat GO Enrichment Barplot (Self-contained)
@@ -369,14 +383,27 @@ ggsave(
   height = 1.5, width = 2, units = 'in'
 )
 
-cat("\nFigure 4B saved to:", figure_file_path, "Figure4/Figure4B.pdf\n")
+# EMF for editable import into PowerPoint
+devEMF::emf(
+  file = paste0(figure_file_path, 'Figure4/Figure4B.emf'),
+  width = 2, height = 1.5,
+  family = "Arial",
+  coordDPI = 300,
+  emfPlus = FALSE,
+  emfPlusFontToPath = FALSE
+)
+print(figure4B)
+dev.off()
+
+cat("\nFigure 4B saved to:", figure_file_path, "Figure4/Figure4B.pdf and .emf\n")
 
 # =============================================================================
 # Figure 4C - Jurkat Example Proteins Dot Plot (Self-contained)
 # =============================================================================
 # Dot plot showing log2(Tuni/Ctrl) for selected Jurkat proteins across cell types
-# Proteins: NFATC2 (Q13469), CTTN (Q14247), SEC31A (O94979)
-# Note: NFATC2 is not identified in HEK293T cells, so only HepG2 and Jurkat shown
+# Proteins: NFATC2 (Q13469), YIPF3 (Q9GZM5), SEC31A (O94979)
+# Note: NFATC2 and YIPF3 are not identified in HEK293T cells, so only HepG2 and
+# Jurkat are shown for those two proteins
 # Uses universal (fixed) y-axis scale across all facets
 # Facet widths are proportional to number of cell types (x-axis categories)
 # Run this section independently to regenerate Figure 4C
@@ -400,8 +427,8 @@ OGlcNAc_protein_norm_Jurkat <- read_csv(
   paste0(source_file_path, 'normalization/OGlcNAc_protein_norm_Jurkat.csv')
 )
 
-# Define proteins of interest: NFATC2, CTTN, SEC31A
-proteins_of_interest_4C <- c("Q13469", "Q14247", "O94979")
+# Define proteins of interest: NFATC2, YIPF3, SEC31A
+proteins_of_interest_4C <- c("Q13469", "Q9GZM5", "O94979")
 
 # Function to extract and calculate fold changes for a cell type
 calculate_fc_4C <- function(norm_data, cell_name, proteins) {
@@ -432,12 +459,12 @@ fc_Jurkat_4C <- calculate_fc_4C(OGlcNAc_protein_norm_Jurkat, "Jurkat", proteins_
 fc_combined_4C <- bind_rows(fc_HEK293T_4C, fc_HepG2_4C, fc_Jurkat_4C) |>
   mutate(
     cell = factor(cell, levels = c("HEK293T", "HepG2", "Jurkat")),
-    Gene = factor(Gene, levels = c("NFATC2", "CTTN", "SEC31A"))
+    Gene = factor(Gene, levels = c("NFATC2", "YIPF3", "SEC31A"))
   )
 
-# Remove HEK293T data for NFATC2 (not identified in HEK293T cells)
+# Remove HEK293T data for NFATC2 and YIPF3 (not identified in HEK293T cells)
 fc_combined_4C <- fc_combined_4C |>
-  filter(!(Gene == "NFATC2" & cell == "HEK293T"))
+  filter(!(Gene %in% c("NFATC2", "YIPF3") & cell == "HEK293T"))
 
 # Drop unused factor levels for proper facet sizing
 fc_combined_4C <- fc_combined_4C |>
@@ -457,6 +484,7 @@ figure4C <- fc_combined_4C |>
   ggplot(aes(x = cell, y = log2FC, color = cell)) +
   geom_hline(yintercept = 0, color = "black", linewidth = 0.5) +
   geom_hline(yintercept = 0.5, color = "black", linetype = "dashed", linewidth = 0.5) +
+  geom_hline(yintercept = -0.5, color = "black", linetype = "dashed", linewidth = 0.5) +
   geom_point(size = 2, position = position_jitter(width = 0.1, seed = 42)) +
   scale_color_manual(values = colors_cell) +
   scale_x_discrete(drop = TRUE) +
@@ -479,7 +507,19 @@ ggsave(
   height = 2, width = 2.5, units = 'in'
 )
 
-cat("\nFigure 4C saved to:", figure_file_path, "Figure4/Figure4C.pdf\n")
+# EMF for editable import into PowerPoint (native vector records, live text)
+devEMF::emf(
+  file = paste0(figure_file_path, 'Figure4/Figure4C.emf'),
+  width = 2.5, height = 2,
+  family = "Arial",
+  coordDPI = 300,                # match PPT's reference DPI so figure displays at true 2.5x2 in
+  emfPlus = FALSE,              # plain EMF — maximum PPT ungroup compatibility
+  emfPlusFontToPath = FALSE     # keep text as text records, not outlined paths
+)
+print(figure4C)
+dev.off()
+
+cat("\nFigure 4C saved to:", figure_file_path, "Figure4/Figure4C.pdf and .emf\n")
 
 # =============================================================================
 # Figure 4D - HEK293T Example Proteins Dot Plot (Self-contained)

@@ -76,7 +76,11 @@ class SpectrumAnnotator:
                  exp_intensity: np.ndarray,
                  tolerance_ppm: float = 20.0,
                  site_index: str = "",
-                 gene: str = ""):
+                 gene: str = "",
+                 do_deisotope: bool = True,
+                 noise_cache: Optional[Dict] = None,
+                 scan_num: Optional[int] = None,
+                 sn_threshold: float = 5.0):
         """
         Initialize the spectrum annotator.
 
@@ -90,16 +94,35 @@ class SpectrumAnnotator:
             tolerance_ppm: Mass tolerance for matching (default 20 ppm)
             site_index: Site identifier (e.g., "Q96KR1_S195")
             gene: Gene name
+            do_deisotope: Whether to deisotope the spectrum before annotation
+            noise_cache: Noise cache from load_noise_cache() for S/N calculation
+            scan_num: Scan number for noise cache lookup
+            sn_threshold: Minimum S/N for bond coverage counting (default 5.0)
         """
         self.peptide = peptide
         self.modifications = modifications
         self.precursor_charge = precursor_charge
         self.precursor_mz = precursor_mz
-        self.exp_mz = exp_mz
-        self.exp_intensity = exp_intensity
         self.tolerance_ppm = tolerance_ppm
         self.site_index = site_index
         self.gene = gene
+        self.sn_threshold = sn_threshold
+
+        # Deisotope spectrum before annotation
+        if do_deisotope:
+            from fragment_calculator import deisotope
+            self.exp_mz, self.exp_intensity = deisotope(
+                exp_mz, exp_intensity, max_charge=precursor_charge
+            )
+        else:
+            self.exp_mz = exp_mz
+            self.exp_intensity = exp_intensity
+
+        # Calculate S/N for each peak
+        from fragment_calculator import get_sn_array
+        self.peak_sn = get_sn_array(
+            self.exp_mz, self.exp_intensity, noise_cache, scan_num
+        )
 
         # Calculate theoretical fragments
         self.calculator = FragmentCalculator(
@@ -112,37 +135,60 @@ class SpectrumAnnotator:
             neutral_loss_types=['H2O', 'NH3', 'HexNAc_TMT', 'HexNAc']
         )
 
-        # Match peaks
+        # Match peaks (on deisotoped spectrum)
         self.matched_ions = match_peaks(
-            self.theoretical_ions, exp_mz, exp_intensity, tolerance_ppm
+            self.theoretical_ions, self.exp_mz, self.exp_intensity, tolerance_ppm,
+            match_isotopes=False  # disabled since we deisotoped
         )
+
+        # Exclude charge-reduced precursor artifacts from c/z ions (EThcD)
+        from fragment_calculator import build_charge_reduced_exclusions, filter_charge_reduced
+        glycan_mass = sum(m['mass'] for m in modifications
+                         if abs(m['mass'] - 528.2859) < 0.1
+                         or abs(m['mass'] - 299.123) < 0.1
+                         or abs(m['mass'] - 203.0794) < 0.1)
+        if glycan_mass > 0:
+            cr_exclusions = build_charge_reduced_exclusions(
+                self.calculator.precursor_mass, precursor_charge, glycan_mass
+            )
+            self.matched_ions = filter_charge_reduced(
+                self.matched_ions, cr_exclusions
+            )
+
+        # Build S/N lookup for matched ions
+        sn_lookup = {}
+        for i, mz_val in enumerate(self.exp_mz):
+            sn_lookup[mz_val] = self.peak_sn[i] if i < len(self.peak_sn) else 0
+
+        # Store S/N on each matched ion for downstream filtering
+        for ion in self.matched_ions:
+            ion._sn = sn_lookup.get(ion.exp_mz, 0)
 
         # Create lookup for matched peaks
         self.matched_mz_set = set()
         self.peak_annotations = {}  # exp_mz -> MatchedIon
         for ion in self.matched_ions:
             self.matched_mz_set.add(ion.exp_mz)
-            # Keep the best annotation (highest intensity if multiple)
             if ion.exp_mz not in self.peak_annotations:
                 self.peak_annotations[ion.exp_mz] = ion
 
         # Find glycan modification position
-        # HexNAc+TMT = 528.2859 Da, HexNAc = 299.123 Da (metabolic labeling)
         self.glycan_position = None
         for mod in modifications:
             if abs(mod['mass'] - 528.2859) < 0.1 or abs(mod['mass'] - 299.123) < 0.1:
                 self.glycan_position = mod['position']
                 break
 
-        # Calculate false match rate (spectrum shifting method from Schulte et al.)
+        # Calculate false match rate (on deisotoped spectrum)
         self.false_match_rate = calculate_false_match_rate(
-            self.theoretical_ions, exp_mz, exp_intensity, tolerance_ppm
+            self.theoretical_ions, self.exp_mz, self.exp_intensity, tolerance_ppm
         )
 
-        # Calculate comprehensive annotation statistics
+        # Calculate annotation statistics (with S/N filtering for bond coverage)
         self.annotation_stats = calculate_annotation_statistics(
             self.matched_ions, self.theoretical_ions,
-            exp_mz, exp_intensity, len(peptide)
+            self.exp_mz, self.exp_intensity, len(peptide),
+            min_sn=sn_threshold
         )
 
     def _get_ion_color(self, ion: 'MatchedIon', has_neutral_loss: bool = False) -> str:
@@ -165,12 +211,8 @@ class SpectrumAnnotator:
         if ion.ion_type == 'oxonium':
             return ion.annotation
         elif ion.ion_type == 'precursor':
-            # Format as [M+nH]+n for precursor ions
-            if 'charge_reduced' in ion.annotation.lower() or 'cr' in ion.annotation.lower():
-                return f"[M+{ion.charge}H]+{ion.charge}" if short else ion.annotation
             return f"[M+{ion.charge}H]+{ion.charge}" if short else ion.annotation
         elif ion.ion_type == 'Y':
-            # Y0 = peptide only (glycan lost), Y1 = intact glycopeptide
             y_type = "Y0" if ion.ion_number == 0 else "Y1"
             return f"{y_type} {ion.charge}+" if short else ion.annotation
         else:
@@ -187,6 +229,10 @@ class SpectrumAnnotator:
 
         Includes both base ions and neutral loss ions, since neutral loss
         ions also indicate bond cleavage.
+
+        Uses S/N threshold (set in __init__) to prevent noise peaks from
+        inflating coverage statistics. S/N is calculated from instrument
+        noise if available, otherwise from median peak intensity.
         """
         coverage = {
             'b': set(),  # b ions (N-terminal, HCD)
@@ -197,7 +243,9 @@ class SpectrumAnnotator:
 
         for ion in self.matched_ions:
             if ion.ion_type in coverage:
-                coverage[ion.ion_type].add(ion.ion_number)
+                ion_sn = getattr(ion, '_sn', float('inf'))
+                if ion_sn >= self.sn_threshold:
+                    coverage[ion.ion_type].add(ion.ion_number)
 
         return coverage
 
@@ -305,12 +353,16 @@ class SpectrumAnnotator:
         # =====================================================================
         ax_info.axis('off')
 
-        # Calculate statistics
+        # Calculate statistics - convert ion numbers to bond positions
         total_bonds = len(self.peptide) - 1
-        # Combine all N-terminal and C-terminal ion coverages
-        n_bonds = coverage['b'] | coverage['c']
-        c_bonds = coverage['y'] | coverage['z']
-        fragmented_bonds = len(n_bonds | c_bonds)
+        covered_bonds = set()
+        # N-terminal ions: bond position = ion number
+        for pos in (coverage['b'] | coverage['c']):
+            covered_bonds.add(pos)
+        # C-terminal ions: bond position = peptide_length - ion number
+        for pos in (coverage['y'] | coverage['z']):
+            covered_bonds.add(len(self.peptide) - pos)
+        fragmented_bonds = len(covered_bonds)
         coverage_pct = fragmented_bonds / total_bonds * 100 if total_bonds > 0 else 0
 
         # Get false match rate values

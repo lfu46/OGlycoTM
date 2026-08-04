@@ -399,10 +399,22 @@ Figure2A <- ggdraw() +
 
 # Save Figure 2A
 ggsave(
-  filename = paste0(figure_file_path, "Figure2/Figure2A.pdf"),
+  filename = paste0(figure_file_path, "Figure2_new/Figure2A.pdf"),
   plot = Figure2A,
   width = 5, height = 3, units = "in"
 )
+
+# EMF for editable import into PowerPoint
+devEMF::emf(
+  file = paste0(figure_file_path, "Figure2_new/Figure2A.emf"),
+  width = 5, height = 3,
+  family = "Arial",
+  coordDPI = 300,
+  emfPlus = FALSE,
+  emfPlusFontToPath = FALSE
+)
+print(Figure2A)
+dev.off()
 
 
 # Figure 2B ---------------------------------------------------------------
@@ -490,7 +502,19 @@ Figure2B <- plot(
 )
 
 # Save plot
-pdf(paste0(figure_file_path, "Figure2/Figure2B.pdf"), width = 2, height = 2)
+pdf(paste0(figure_file_path, "Figure2_new/Figure2B.pdf"), width = 2, height = 2)
+print(Figure2B)
+dev.off()
+
+# EMF for editable import into PowerPoint
+devEMF::emf(
+  file = paste0(figure_file_path, "Figure2_new/Figure2B.emf"),
+  width = 2, height = 2,
+  family = "Arial",
+  coordDPI = 300,
+  emfPlus = FALSE,
+  emfPlusFontToPath = FALSE
+)
 print(Figure2B)
 dev.off()
 
@@ -713,10 +737,22 @@ Figure2C <- ggplot() +
 
 # Save plot
 ggsave(
-  filename = paste0(figure_file_path, "Figure2/Figure2C.pdf"),
+  filename = paste0(figure_file_path, "Figure2_new/Figure2C.pdf"),
   plot = Figure2C,
   width = 4, height = 2, units = "in"
 )
 
-cat("\nFigure 2C saved to:", figure_file_path, "Figure2/Figure2C.pdf\n")
+# EMF for editable import into PowerPoint
+devEMF::emf(
+  file = paste0(figure_file_path, "Figure2_new/Figure2C.emf"),
+  width = 4, height = 2,
+  family = "Arial",
+  coordDPI = 300,
+  emfPlus = FALSE,
+  emfPlusFontToPath = FALSE
+)
+print(Figure2C)
+dev.off()
+
+cat("\nFigure 2C saved to:", figure_file_path, "Figure2_new/Figure2C.pdf and .emf\n")
 

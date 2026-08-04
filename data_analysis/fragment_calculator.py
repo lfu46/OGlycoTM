@@ -102,7 +102,7 @@ ION_ADJUSTMENTS = {
     'b': PROTON,                           # +H+
     'y': H2O + PROTON,                     # +H2O +H+
     'c': NH3 + PROTON,                     # +NH3 +H+ (or +NH2 to peptide)
-    'z': -NH3 + H2O + PROTON,              # z-radical: -NH + O + H+
+    'z': -NH3 + H2O + 2 * PROTON,          # z+H (even-electron, H rearrangement)
 }
 
 # =============================================================================
@@ -413,32 +413,48 @@ class FragmentCalculator:
     def _get_glycan_type(self) -> Optional[str]:
         """Determine the type of glycan modification."""
         for pos, mod in self.mod_by_position.items():
+            if pos == 0 or pos == -1:
+                continue  # skip N/C-term mods
             # HexNAc + TMT = 528.2859 Da
             if abs(mod.mass - MOD_MASSES['HexNAc_TMT']) < 0.1:
                 return 'HexNAc_TMT'
             # HexNAc only (metabolic labeling) = 203.0794 Da
             elif abs(mod.mass - MOD_MASSES['HexNAc']) < 0.1:
                 return 'HexNAc'
+            # OPair-reported O-GlcNAc = 299.1230 Da (HexNAc_TMT - TMT)
+            elif abs(mod.mass - 299.1230) < 0.1:
+                return 'HexNAc'
         return None
 
     def calculate_charge_reduced_precursor(self) -> List[TheoreticalIon]:
         """
         Calculate charge-reduced precursor species from ETD.
-        ETD can reduce precursor charge by electron capture.
+
+        These are the intact glycopeptide at reduced charge states (ETnoD).
+        Labeled as Y1 ions in glycoproteomics nomenclature since the glycan
+        is still attached: Y1 = peptide + glycan (intact glycopeptide).
         """
         ions = []
+        glycan_type = self._get_glycan_type()
 
-        # Charge-reduced species: [M+nH](n-1)+ etc.
         for reduced_charge in range(1, self.precursor_charge):
-            # Mass increases slightly due to electron capture
             mz = (self.precursor_mass + reduced_charge * PROTON) / reduced_charge
+            # Use Y1 label for glycopeptides (glycan intact), generic label otherwise
+            if glycan_type:
+                annotation = f"Y1 {reduced_charge}+"
+                ion_type = 'Y'
+                ion_number = 1
+            else:
+                annotation = f"[M+{reduced_charge}H]{reduced_charge}+"
+                ion_type = 'precursor'
+                ion_number = 0
             ion = TheoreticalIon(
-                ion_type='precursor',
-                ion_number=0,
+                ion_type=ion_type,
+                ion_number=ion_number,
                 charge=reduced_charge,
                 mz=mz,
                 sequence=self.peptide,
-                annotation=f"[M+{self.precursor_charge}H]{reduced_charge}+• (CR)"
+                annotation=annotation
             )
             ions.append(ion)
 
@@ -540,13 +556,17 @@ class FragmentCalculator:
         if neutral_loss_types is None:
             neutral_loss_types = ['H2O', 'NH3', 'HexNAc_TMT', 'HexNAc']
 
+        # Charge-reduced precursors are Y1 ions for glycopeptides
+        y_ions = self.calculate_Y_ions()
+        cr_ions = self.calculate_charge_reduced_precursor()
+
         result = {
             'b': self.calculate_b_ions(),
             'y': self.calculate_y_ions(),
             'c': self.calculate_c_ions(),
             'z': self.calculate_z_ions(),
-            'Y': self.calculate_Y_ions(),
-            'precursor': self.calculate_precursor_isotopes() + self.calculate_charge_reduced_precursor(),
+            'Y': y_ions + cr_ions,
+            'precursor': self.calculate_precursor_isotopes(),
             'oxonium': self.calculate_oxonium_ions(),
         }
 
@@ -565,6 +585,218 @@ class FragmentCalculator:
         for ion_list in all_ions.values():
             flat_list.extend(ion_list)
         return flat_list
+
+
+# =============================================================================
+# DEISOTOPING
+# =============================================================================
+
+ISOTOPE_SPACING = 1.003355  # C13-C12 mass difference
+
+
+def deisotope(exp_mz: np.ndarray,
+              exp_intensity: np.ndarray,
+              max_charge: int = 4,
+              tolerance_ppm: float = 15.0,
+              min_isotope_ratio: float = 0.01,
+              max_isotope_ratio: float = 2.0,
+              ) -> Tuple[np.ndarray, np.ndarray]:
+    """
+    Remove isotope peaks from a centroided spectrum, keeping monoisotopic peaks.
+
+    For each peak, checks whether a peak exists ~1.003/z Da higher (M+1) that
+    could be an isotope. If found, marks the higher peak as an isotope and
+    removes it.
+
+    Args:
+        exp_mz: Experimental m/z array (sorted ascending)
+        exp_intensity: Experimental intensity array
+        max_charge: Maximum charge state to consider for isotope spacing
+        tolerance_ppm: Mass tolerance for isotope peak matching
+        min_isotope_ratio: Minimum M+1/M+0 intensity ratio to be an isotope
+        max_isotope_ratio: Maximum M+1/M+0 intensity ratio (for large
+            peptides where M+1 can exceed M+0)
+
+    Returns:
+        (deisotoped_mz, deisotoped_intensity) with isotope peaks removed
+    """
+    if len(exp_mz) == 0:
+        return exp_mz, exp_intensity
+
+    is_isotope = np.zeros(len(exp_mz), dtype=bool)
+
+    for i in range(len(exp_mz)):
+        if is_isotope[i]:
+            continue
+        for z in range(1, max_charge + 1):
+            spacing = ISOTOPE_SPACING / z
+            target_mz = exp_mz[i] + spacing
+            tol = target_mz * tolerance_ppm / 1e6
+            # Search forward for M+1 peak
+            for j in range(i + 1, len(exp_mz)):
+                if exp_mz[j] > target_mz + tol:
+                    break
+                if abs(exp_mz[j] - target_mz) <= tol and not is_isotope[j]:
+                    ratio = exp_intensity[j] / exp_intensity[i] if exp_intensity[i] > 0 else 0
+                    if min_isotope_ratio <= ratio <= max_isotope_ratio:
+                        is_isotope[j] = True
+                        # Also check M+2
+                        target_m2 = exp_mz[i] + 2 * spacing
+                        tol_m2 = target_m2 * tolerance_ppm / 1e6
+                        for k in range(j + 1, len(exp_mz)):
+                            if exp_mz[k] > target_m2 + tol_m2:
+                                break
+                            if abs(exp_mz[k] - target_m2) <= tol_m2 and not is_isotope[k]:
+                                ratio2 = exp_intensity[k] / exp_intensity[i] if exp_intensity[i] > 0 else 0
+                                if ratio2 <= max_isotope_ratio:
+                                    is_isotope[k] = True
+                                    break
+                    break
+
+    keep = ~is_isotope
+    return exp_mz[keep], exp_intensity[keep]
+
+
+# =============================================================================
+# CHARGE-REDUCED PRECURSOR EXCLUSION (EThcD)
+# =============================================================================
+
+GLYCAN_RESIDUE_MASSES = {
+    'HexNAc': 203.07937,
+    'Hex': 162.05282,
+    'Fuc': 146.05791,
+    'NeuAc': 291.09542,
+}
+
+
+def build_charge_reduced_exclusions(
+    precursor_neutral_mass: float,
+    charge: int,
+    glycan_mass: float,
+    n_isotopes: int = 4,
+) -> List[float]:
+    """
+    Build list of m/z values for charge-reduced precursor species (ETnoD)
+    and their common neutral loss satellites.
+
+    In ETD/EThcD, the precursor can capture an electron without backbone
+    fragmentation, producing charge-reduced species at z-1, z-2, etc.
+    These can be falsely matched as c/z fragment ions.
+
+    Returns list of m/z values to exclude from c/z matching.
+    """
+    exclusions = []
+    neutral_losses = [
+        0.0,
+        203.07937,   # -HexNAc
+        162.05282,   # -Hex
+        291.09542,   # -NeuAc
+    ]
+
+    for reduced_z in range(1, charge):
+        for nl_mass in neutral_losses:
+            if nl_mass > glycan_mass + 0.01:
+                continue
+            for iso in range(n_isotopes):
+                cr_mz = (precursor_neutral_mass - nl_mass
+                         + reduced_z * PROTON
+                         + iso * ISOTOPE_SPACING) / reduced_z
+                exclusions.append(cr_mz)
+
+    return exclusions
+
+
+def filter_charge_reduced(
+    matched_ions: List['MatchedIon'],
+    exclusion_mzs: List[float],
+    exclusion_ppm: float = 15.0,
+) -> List['MatchedIon']:
+    """
+    Remove matched c/z ions that overlap with charge-reduced precursor species.
+
+    Args:
+        matched_ions: List of matched ions from match_peaks
+        exclusion_mzs: List of m/z values to exclude (from build_charge_reduced_exclusions)
+        exclusion_ppm: Tolerance in ppm for exclusion matching
+
+    Returns:
+        Filtered list with charge-reduced artifacts removed
+    """
+    if not exclusion_mzs:
+        return matched_ions
+
+    exclusion_arr = np.array(exclusion_mzs)
+    filtered = []
+    for m in matched_ions:
+        if m.ion_type in ('c', 'z'):
+            ppm_diffs = np.abs(m.exp_mz - exclusion_arr) / exclusion_arr * 1e6
+            if np.min(ppm_diffs) < exclusion_ppm:
+                continue
+        filtered.append(m)
+    return filtered
+
+
+# =============================================================================
+# S/N CALCULATION
+# =============================================================================
+
+def load_noise_cache(noise_mzml_path: str) -> Dict[int, Dict[str, np.ndarray]]:
+    """
+    Load noise profiles from ThermoRawFileParser -N mzML file.
+
+    Returns dict keyed by scan number with 'noise_mz' and 'noise_int' arrays.
+    """
+    from pyteomics import mzml
+    cache = {}
+    reader = mzml.MzML(str(noise_mzml_path))
+    for spec in reader:
+        scan_id = spec.get('id', '')
+        if 'scan=' in scan_id:
+            scan_num = int(scan_id.split('scan=')[-1])
+        else:
+            continue
+        if 'sampled noise m/z array' in spec:
+            cache[scan_num] = {
+                'noise_mz': spec['sampled noise m/z array'],
+                'noise_int': spec['sampled noise intensity array'],
+            }
+    reader.close()
+    return cache
+
+
+def get_sn_array(exp_mz: np.ndarray,
+                 exp_intensity: np.ndarray,
+                 noise_cache: Optional[Dict] = None,
+                 scan_num: Optional[int] = None,
+                 ) -> np.ndarray:
+    """
+    Calculate S/N for each peak. Uses instrument noise if available,
+    otherwise falls back to median-based estimation.
+
+    Args:
+        exp_mz: Experimental m/z array
+        exp_intensity: Experimental intensity array
+        noise_cache: Dict from load_noise_cache (optional)
+        scan_num: Scan number to look up in noise_cache (optional)
+
+    Returns:
+        Array of S/N values, one per peak
+    """
+    if len(exp_mz) == 0:
+        return np.array([])
+
+    # Try instrument noise first
+    if noise_cache is not None and scan_num is not None:
+        noise_data = noise_cache.get(scan_num)
+        if noise_data is not None:
+            noise_at_peaks = np.interp(exp_mz, noise_data['noise_mz'],
+                                        noise_data['noise_int'])
+            noise_at_peaks = np.maximum(noise_at_peaks, 1.0)  # avoid div by zero
+            return exp_intensity / noise_at_peaks
+
+    # Fallback: median-based noise estimation
+    noise_level = max(np.median(exp_intensity), 1.0)
+    return exp_intensity / noise_level
 
 
 # =============================================================================
@@ -774,7 +1006,8 @@ def calculate_annotation_statistics(
     theoretical_ions: List[TheoreticalIon],
     exp_mz: np.ndarray,
     exp_intensity: np.ndarray,
-    peptide_length: int
+    peptide_length: int,
+    min_sn: float = 5.0
 ) -> Dict:
     """
     Calculate comprehensive annotation statistics.
@@ -791,6 +1024,8 @@ def calculate_annotation_statistics(
         exp_mz: Experimental m/z array
         exp_intensity: Experimental intensity array
         peptide_length: Length of the peptide sequence
+        min_sn: Minimum signal-to-noise ratio for bond coverage counting.
+            Noise is estimated as the median peak intensity.
 
     Returns:
         Dictionary with annotation statistics
@@ -800,7 +1035,14 @@ def calculate_annotation_statistics(
     n_term_positions = set()  # b, c ions
     c_term_positions = set()  # y, z ions
 
+    # Apply S/N filter for bond coverage to prevent noise peaks from
+    # inflating coverage statistics
+    noise_level = np.median(exp_intensity) if len(exp_intensity) > 0 else 1.0
+    min_intensity = noise_level * min_sn
+
     for ion in matched_ions:
+        if ion.exp_intensity < min_intensity:
+            continue
         if ion.ion_type in ['b', 'c'] and ion.ion_number > 0:
             n_term_positions.add(ion.ion_number)
         elif ion.ion_type in ['y', 'z'] and ion.ion_number > 0:
