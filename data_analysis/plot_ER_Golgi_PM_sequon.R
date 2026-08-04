@@ -5,7 +5,17 @@ library(devEMF)
 figure_file_path <- '/Volumes/cos-lab-rwu60/Longping/OGlycoTM_Final_Version/Figures/'
 colors_cell <- c("HEK293T" = "#4DBBD5", "HepG2" = "#F39B7F", "Jurkat" = "#00A087")
 
-# Data from analysis (unique site level)
+# Data from analysis (unique site level).
+#
+# WARNING -- these counts are TRANSCRIBED from the console output of
+# check_ER_Golgi_PM_sequon.R, not recomputed here. They will silently go stale if the
+# underlying PSM data or the site filter changes. Before reusing this panel, re-run
+#
+#     Rscript check_ER_Golgi_PM_sequon.R
+#
+# and reconcile the printed per-cell ER / Golgi / PM / total_sites / n_sequon / n_proteins
+# numbers against the tibble below. Values current as of the Mar-2026 revision
+# (reviewer response Figure R1A).
 df <- tibble(
   Cell = factor(c("HEK293T", "HepG2", "Jurkat"), levels = c("HEK293T", "HepG2", "Jurkat")),
   ER = c(7, 5, 4),

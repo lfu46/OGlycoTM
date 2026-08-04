@@ -7,9 +7,14 @@ library(rstatix)
 # Source data paths, colors, and differential analysis results
 source('data_source_DE.R')
 
-# Figure S2 ---------------------------------------------------------------
+# Functional-category logFC violin ----------------------------------------
 # Violin boxplot comparing logFC of O-GlcNAc proteins in specific functional categories
 # Categories: DNA binding, RNA binding, Transcription
+#
+# NOT the published Figure S2. This panel was an earlier Figure 3C candidate and did not ship.
+# Published Figure S2 is "GO terms enriched in glycoproteins upregulated in HEK293T cells",
+# built by FigureS2.R. The output below was previously also called FigureS2.pdf, which made the
+# two indistinguishable by filename; renamed to functional_category_logFC.
 # Statistical test: Kolmogorov-Smirnov test (compares distribution shapes)
 # (Originally Figure 3C)
 
@@ -56,9 +61,9 @@ DNA_binding_proteins <- extract_proteins(common_OGlcNAc_GO, DNA_binding_terms)
 RNA_binding_proteins <- extract_proteins(common_OGlcNAc_GO, RNA_binding_terms)
 transcription_proteins <- extract_proteins(common_OGlcNAc_GO, transcription_terms)
 
-cat("Figure S2 - DNA binding proteins:", length(DNA_binding_proteins), "\n")
-cat("Figure S2 - RNA binding proteins:", length(RNA_binding_proteins), "\n")
-cat("Figure S2 - Transcription proteins:", length(transcription_proteins), "\n")
+cat("Functional-category violin - DNA binding proteins:", length(DNA_binding_proteins), "\n")
+cat("Functional-category violin - RNA binding proteins:", length(RNA_binding_proteins), "\n")
+cat("Functional-category violin - Transcription proteins:", length(transcription_proteins), "\n")
 
 # Create combined logFC data for each category
 create_category_df <- function(proteins, category_name) {
@@ -120,7 +125,7 @@ FigureS2_ks_results <- bind_rows(
   add_significance("p") %>%
   filter(p.signif != "ns")  # Remove non-significant comparisons
 
-cat("\nFigure S2 - KS Test Results:\n")
+cat("\nFunctional-category violin - KS Test Results:\n")
 print(FigureS2_ks_results)
 
 # Add y positions for significance bars
@@ -135,7 +140,7 @@ FigureS2_ks_results <- FigureS2_ks_results %>%
   )
 
 # Create faceted violin boxplot
-FigureS2 <- FigureS2_df %>%
+functional_category_logFC <- FigureS2_df %>%
   ggplot(aes(x = CellType, y = logFC)) +
   geom_violin(aes(fill = CellType), color = "transparent") +
   geom_boxplot(color = "black", outliers = FALSE, width = 0.2, linewidth = 0.3) +
@@ -164,12 +169,12 @@ FigureS2 <- FigureS2_df %>%
     legend.position = "none"
   )
 
-print(FigureS2)
+print(functional_category_logFC)
 
 ggsave(
-  filename = paste0(figure_file_path, "Supporting_Figures/FigureS2.pdf"),
-  plot = FigureS2,
+  filename = paste0(figure_file_path, "Supporting_Figures/functional_category_logFC.pdf"),
+  plot = functional_category_logFC,
   width = 2, height = 1.5, units = "in"
 )
 
-cat("\nFigure S2 saved to:", figure_file_path, "Supporting_Figures/\n")
+cat("\nFunctional-category logFC violin saved to:", figure_file_path, "Supporting_Figures/\n")

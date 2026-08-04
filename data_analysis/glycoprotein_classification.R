@@ -5,7 +5,10 @@
 library(tidyverse)
 
 # source data
-source("data_analysis/data_source.R")
+# Every other script in this folder uses source('data_source.R') and is run with the working
+# directory set to data_analysis/. This one used "data_analysis/data_source.R", so it only ran
+# from the repo root -- and failed from the folder it lives in.
+source("data_source.R")
 
 # Define glycan composition filters
 OGlcNAc_compositions <- c(
