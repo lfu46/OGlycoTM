@@ -1,0 +1,32 @@
+# Site panels rendered by pymol_site_panels.py. One row per panel; this table replaces the 20
+# near-identical *_pymol.py scripts it was generated from (they differed only in the fields below).
+#
+# style      surface  = pLDDT cartoon + 70% transparent surface, whole residue as spheres
+#                       (the O-GalNAc Figure 6E panels)
+#            sidechain= pLDDT cartoon + surface, only the modified side-chain atoms as spheres
+#                       (the Figure 6E O-GlcNAc candidate panels)
+# sites      semicolon-separated, residue letter + position, e.g. T44 or T139;S146
+# color      PyMOL colour name for the site spheres (orange = upregulated, cyan = stable)
+# out_subdir relative to the Figures root (OGLYCOTM_FIGURES, else the network share)
+# prefix     output filename prefix: <prefix>_<gene>_<sites>_structure.png/.pdf and _session.pse
+style,gene,accession,sites,color,out_subdir,prefix,notes
+surface,CPD,O75976,T44,cyan,Figure6_OGalNAc,OGalNAc,carboxypeptidase D; Figure 6E domain-context example
+surface,GALNT2,Q10471,T70,cyan,Figure6_OGalNAc,OGalNAc,polypeptide GalNAc-transferase 2
+surface,LAIR1,Q6GTX8,T141,cyan,Figure6_OGalNAc,OGalNAc,replaced OS9 S529 in the main Figure 6E panel
+surface,LRP11,Q86VZ4,T366,cyan,Figure6_OGalNAc,OGalNAc,LDL receptor-related protein 11
+surface,MTAP,Q13126,S3,cyan,Figure6_OGalNAc,OGalNAc,methylthioadenosine phosphorylase
+surface,NDST1,P52848,S65,cyan,Figure6_OGalNAc,OGalNAc,N-deacetylase/N-sulfotransferase 1
+surface,OS9,Q13438,S529,cyan,Figure6_OGalNAc,OGalNAc,site lies outside the MRH lectin domain; contextual candidate only
+surface,PPP1R12A,O14974,S564,cyan,Figure6_OGalNAc,OGalNAc,myosin phosphatase target subunit 1
+surface,PTPRC,P08575,T139;S146,orange,Figure6_OGalNAc,OGalNAc,CD45; two sites; Figure 6E domain-architecture example
+surface,QSOX2,Q6ZRP7,T583,cyan,Figure6_OGalNAc,OGalNAc,sulfhydryl oxidase 2
+surface,SLC29A1,Q99808,S63,cyan,Figure6_OGalNAc,OGalNAc,equilibrative nucleoside transporter 1
+surface,SLC39A10,Q9ULF5,S210,cyan,Figure6_OGalNAc,OGalNAc,zinc transporter ZIP10
+surface,SPATA33,Q96N06,S106,cyan,Figure6_OGalNAc,OGalNAc,spermatogenesis-associated protein 33
+surface,TFRC,P02786,T104,orange,Figure6_OGalNAc,OGalNAc,transferrin receptor; previously reported O-GalNAc site
+surface,TGOLN2,O43493,S68,cyan,Figure6_OGalNAc,OGalNAc,trans-Golgi network protein 2
+surface,TXNDC15,Q96J42,S110;T113;S122,cyan,Figure6_OGalNAc,OGalNAc,three sites; rescued by the EThcD TMT fix
+sidechain,PRDX6,P30041,T95,tv_orange,Figure6/Figure6E_candidates,Figure6E,Thioredoxin domain 5-169; HepG2; logFC +1.51; pLDDT 97.6
+sidechain,PRDX6,P30041,Y89,tv_orange,Figure6/Figure6E_candidates,Figure6E,Tyr O-GlcNAc example; structured region
+sidechain,PWP2,Q15269,T23,tv_orange,Figure6/Figure6E_candidates,Figure6E,WD40 repeat region
+sidechain,DDX50,Q9BQ39,Y492,tv_orange,Figure6/Figure6E_candidates,Figure6E,Tyr O-GlcNAc example

@@ -111,6 +111,9 @@ __pycache__/
 !docs/tables/*.xlsx
 !docs/spectra/*.png
 
+# Config tables that drive scripts are code, not data -- keep them tracked
+!data_analysis/pymol_site_panels.csv
+
 # Internal working notes — deliberately NOT published.
 # This repository is public and attached to a published paper. The files below hold advisor
 # decisions, reviewer-response strategy, and data caveats that are not stated in the article.

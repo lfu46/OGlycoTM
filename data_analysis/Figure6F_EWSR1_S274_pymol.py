@@ -20,7 +20,26 @@ import os
 
 PROTEIN_ID = "Q01844"
 PROTEIN_NAME = "EWSR1"
-STRUCTURE_PATH = f"/Volumes/cos-lab-rwu60/Longping/OGlycoTM_Final_Version/data_source/alphafold_structures/AF-{PROTEIN_ID}-F1-model_v4.pdb"
+STRUCTURE_DIR = "/Volumes/cos-lab-rwu60/Longping/OGlycoTM_Final_Version/data_source/alphafold_structures"
+
+
+def resolve_structure(protein_id):
+    """Newest cached AlphaFold model for this accession.
+
+    This used to interpolate `model_v4` while every other panel used v6, so EWSR1 was rendered
+    from a different model generation than the rest of the figure. Never hand-write an AlphaFold
+    filename or version: use the newest cached file, or mzml_utils.structure.fetch_structure()
+    (as data_analysis/pymol_site_panels.py does) to resolve one properly.
+    """
+    import glob
+    hits = sorted(glob.glob(os.path.join(STRUCTURE_DIR, f"AF-{protein_id}-F1-model_v*.pdb")),
+                  reverse=True)
+    if not hits:
+        raise SystemExit(f"no cached AlphaFold model for {protein_id} in {STRUCTURE_DIR}")
+    return hits[0]
+
+
+STRUCTURE_PATH = resolve_structure(PROTEIN_ID)
 OUTPUT_DIR = "/Volumes/cos-lab-rwu60/Longping/OGlycoTM_Final_Version/Figures/Figure6"
 
 # O-GlcNAc site data
