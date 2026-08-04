@@ -1,11 +1,41 @@
 # import packages
 library(tidyverse)
 
+# Data roots.
+#
+# The network share is canonical (see 00_FILE_MAP.md at its root). It is also SMB and drops reads
+# intermittently, so a curated copy of data_source/ and Figures/ is kept on the Expansion drive.
+# Point OGLYCOTM_DATA / OGLYCOTM_FIGURES at that copy to read from it instead:
+#
+#   Sys.setenv(OGLYCOTM_DATA    = "/Volumes/Expansion/Longping/OGlycoTM/data_source")
+#   Sys.setenv(OGLYCOTM_FIGURES = "/Volumes/Expansion/Longping/OGlycoTM/Figures")
+#
+# Same idiom as OGLYCO_DATA in export_web_data.py. Unset (or unreadable) falls back to the
+# network path, so every existing script keeps working unchanged.
+resolve_data_root <- function(env_var, default) {
+  p <- Sys.getenv(env_var, unset = "")
+  if (!nzchar(p)) return(default)
+  if (!dir.exists(p)) {
+    warning(env_var, " is set to '", p, "' but that directory is not readable; ",
+            "falling back to ", default, call. = FALSE)
+    return(default)
+  }
+  if (!grepl("/$", p)) p <- paste0(p, "/")
+  message("data_source.R: ", env_var, " -> ", p)
+  p
+}
+
 # source file path
-source_file_path <- '/Volumes/cos-lab-rwu60/Longping/OGlycoTM_Final_Version/data_source/'
+source_file_path <- resolve_data_root(
+  "OGLYCOTM_DATA",
+  '/Volumes/cos-lab-rwu60/Longping/OGlycoTM_Final_Version/data_source/'
+)
 
 # figure file path
-figure_file_path <- '/Volumes/cos-lab-rwu60/Longping/OGlycoTM_Final_Version/Figures/'
+figure_file_path <- resolve_data_root(
+  "OGLYCOTM_FIGURES",
+  '/Volumes/cos-lab-rwu60/Longping/OGlycoTM_Final_Version/Figures/'
+)
 
 # define color palette
 color_palette <- c("#E64B35", "#4DBBD5", "#00A087", "#3C5488", "#F39B7F", "#8491B4")

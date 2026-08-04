@@ -12,9 +12,7 @@ import json
 import numpy as np
 import pandas as pd
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-
-from fragment_calculator import (
+from spectrum_annotator_ddzby.fragment_calculator import (
     FragmentCalculator,
     match_peaks,
     PROTON,

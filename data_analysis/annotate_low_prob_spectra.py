@@ -23,10 +23,7 @@ from matplotlib.backends.backend_pdf import PdfPages
 import json
 import re
 
-# Add current directory to path for imports
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-
-from fragment_calculator import (
+from spectrum_annotator_ddzby.fragment_calculator import (
     FragmentCalculator,
     TheoreticalIon,
     match_peaks,
@@ -34,7 +31,7 @@ from fragment_calculator import (
     calculate_false_match_rate,
     calculate_annotation_statistics
 )
-from spectrum_annotator import SpectrumAnnotator
+from spectrum_annotator_ddzby import SpectrumAnnotator
 
 # =============================================================================
 # Configuration
