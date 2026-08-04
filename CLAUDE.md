@@ -52,9 +52,48 @@ source('differential_analysis.R') # Differential expression analysis
 
 - **source_file_path**: `/Volumes/cos-lab-rwu60/Longping/OGlycoTM_Final_Version/data_source/`
 - **figure_file_path**: `/Volumes/cos-lab-rwu60/Longping/OGlycoTM_Final_Version/Figures/`
+- **Env overrides**: set `OGLYCOTM_DATA` / `OGLYCOTM_FIGURES` to read from the faster Expansion
+  working copy instead of the SMB share. Unset or unreadable falls back to the network path, so
+  no script needs editing:
+  ```r
+  Sys.setenv(OGLYCOTM_DATA    = "/Volumes/Expansion/Longping/OGlycoTM/data_source")
+  Sys.setenv(OGLYCOTM_FIGURES = "/Volumes/Expansion/Longping/OGlycoTM/Figures")
+  ```
 - **Color palettes**:
   - `colors_glycan`: O-GlcNAc (#F39B7F salmon), O-GalNAc (#4DBBD5 blue)
   - `colors_cell`: HEK293T (#4DBBD5), HepG2 (#F39B7F), Jurkat (#00A087)
+
+## Storage layout (reorganized 2026-08-04)
+
+The **network share is canonical** — 114 files hard-code `/Volumes/cos-lab-rwu60/...` with 232
+references to the project root. Do not move or rename it.
+
+| Where | Holds | Size |
+|---|---|---|
+| `/Volumes/cos-lab-rwu60/Longping/OGlycoTM_Final_Version/` | everything; `.raw` + calibrated `.mzML` live here only | ~161 GB |
+| `/Volumes/Expansion/Longping/OGlycoTM/` | curated working copy: `data_source/`, `Figures/`, `Manuscript_Archive/`, repo snapshot | ~10 GB |
+| this repo | code only | ~69 MB |
+
+Read **`00_FILE_MAP.md` at the network project root** before touching the data. It records the
+layout, the search provenance (FragPipe 24.0 / MSFragger 4.4 / pwiz 3.0.25139), and the exact
+commands that regenerate the two deleted classes of artifact:
+
+- 43 GB of 600-DPI TIFF spectra — rebuilt from the kept PDFs with `magick -density 600 … -quality 100`
+  (verified pixel-identical).
+- 44.7 GB of **uncalibrated** `.mzML` — rebuilt from the kept `.raw` with the recorded `msconvert`
+  filter chain. Analysis uses the *calibrated* mzML, which was kept.
+
+Drift between the two drives is declared in `oglycotm_sync_policy.tsv` on the Expansion drive and
+checked with the shared checker:
+
+```bash
+python3 /Users/longpingfu/Downloads/OGlyco_DBA/data_analysis/tools/dba_sync_check.py \
+        --policy /Volumes/Expansion/Longping/OGlycoTM/oglycotm_sync_policy.tsv
+#   ... --checksum   md5-verify same-size files (catches SMB truncation)
+#   ... --apply      reconcile (never deletes; a size mismatch needs a human)
+```
+
+Internal revision notes are in `REVISION_NOTES.local.md`, gitignored because this repo is public.
 
 ## Experimental Design
 
@@ -100,21 +139,39 @@ Each figure script can run independently by sourcing `data_source.R` or `data_so
 
 ## PyMOL 3D Structure Visualization (Figure 5E/5F, formerly 6E/6F)
 
-PyMOL scripts for protein structure visualization with O-GlcNAc site highlighting:
-- **Figure6E_*_pymol.py** - Candidate structured region sites (DDX50_Y492, PWP2_T23, PRDX6_T95, PRDX6_Y89)
-- **Figure6F_*_pymol.py** - IDR region site examples (EWSR1_S274, etc.)
+Site panels are **table-driven**. The 16 `OGalNAc_*_pymol.py` and 4 `Figure6E_*_pymol.py` scripts
+were two templates repeated with three values changed; they were replaced 2026-08-04 by
+`pymol_site_panels.py` + `pymol_site_panels.csv` (2,143 lines → 309), verified to render
+pixel-identically.
 
-All PyMOL scripts share consistent formatting:
+```bash
+python3 pymol_site_panels.py --list          # show the panel table
+python3 pymol_site_panels.py --only PTPRC    # render one (matches gene/accession/site)
+python3 pymol_site_panels.py                 # render all 20
+```
+
+To add a panel, add a CSV row — do not write a new script. Columns:
+`style,gene,accession,sites,color,out_subdir,prefix,notes`, where `style` is `surface`
+(whole residue as spheres, the O-GalNAc panels) or `sidechain` (only the modified side-chain
+atoms, the Figure 6E panels), and `sites` is a semicolon list like `T139;S146`.
+
+Shared formatting (unchanged from the originals):
 - pLDDT coloring (blue=high confidence, orange=low)
 - Transparent surface (70% transparency)
 - Site highlighted as colored spheres (orange=upregulated, cyan=stable)
 
-```bash
-# Run PyMOL script (requires PyMOL installed via Homebrew)
-/opt/homebrew/bin/pymol -c -q Figure6E_PRDX6_T95_pymol.py
+**NEVER hand-write an AlphaFold filename or version.** The driver resolves structures via
+`mzml_utils.structure.fetch_structure()` with a cached-file fast path. Interpolating
+`AF-{acc}-F1-model_v6.pdb` is how `Figure6F_EWSR1_S274_pymol.py` ended up pinned to `model_v4`
+while every other panel used v6 — that script now resolves the newest cached model instead.
 
-# AlphaFold structures are downloaded from:
-# https://alphafold.ebi.ac.uk/files/AF-{UniProt_ID}-F1-model_v4.pdb (or v6)
+Still hand-written, kept for genuine per-protein domain/IDR colouring that does not parameterize:
+`Figure6F_EWSR1_S274_pymol.py`, `Figure6F_HOXA13_pymol.py`, `Figure6F_HYOU1_pymol.py`,
+`Figure6F_pymol.py`, and `Figure6F_ray_modes.py` (render-settings exploration).
+
+```bash
+# Run a hand-written PyMOL script (requires PyMOL installed via Homebrew)
+/opt/homebrew/bin/pymol -c -q Figure6F_HYOU1_pymol.py
 ```
 
 PyMOL ray trace modes:
@@ -127,7 +184,7 @@ PyMOL ray trace modes:
 
 **CRITICAL: ALWAYS use `mzml_utils.MzMLReader` for spectrum access — NEVER `pyteomics.mzml` (streaming, extremely slow). Always check for cached data (pickles, filter_string_cache.csv) before opening mzML files.**
 
-**Use GlycoSpectrumAnnotator** (`spectrum_annotator_ddzby`, installed as editable package at `/Users/longpingfu/Downloads/GlycoSpectrumAnnotator/`) for all new annotation. The local `spectrum_annotator.py` is outdated.
+**Use GlycoSpectrumAnnotator** (`spectrum_annotator_ddzby`, installed as editable package at `/Users/longpingfu/Downloads/GlycoSpectrumAnnotator/`) for all annotation. The local `spectrum_annotator.py` / `fragment_calculator.py` forks were **deleted 2026-08-04** — they were strict older subsets (646 vs 1490 and 1275 vs 1855 lines), missing the glycan library, N-glycan support, precursor-envelope filtering and the isotope-consistency flags. Every script behind a published spectrum already used the installed package. Import from `spectrum_annotator_ddzby` / `spectrum_annotator_ddzby.fragment_calculator`, never from a local module.
 
 Python modules for spectrum annotation:
 - **mzml_utils** (`import mzml_utils`) - Indexed mzML reader (`MzMLReader`), ion search, fragment calculator, deisotoping, spectral similarity, protease digestion

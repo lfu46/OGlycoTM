@@ -45,26 +45,35 @@ Protein *O*-GlcNAcylation was quantified in a site-specific manner by mass spect
 
 ```
 OGlycoTM/
-├── data_analysis/                 R + Python analysis pipeline
+├── data_analysis/                 R + Python analysis pipeline (70 active scripts)
+│   ├── data_source.R              Central config: data paths + colour palettes
+│   │                              (OGLYCOTM_DATA / OGLYCOTM_FIGURES override the paths)
 │   ├── data_import.R              Import search results
-│   ├── data_normalization.R       TMT normalization
 │   ├── data_filtering.R           Site / PSM filtering
 │   ├── data_quantification.R      O-GlcNAc quantification
 │   ├── data_quantification_OGalNAc.R
-│   ├── differential_analysis.R    Tuni/Ctrl differential testing
+│   ├── data_normalization.R       TMT normalization (SL + edgeR TMM)
+│   ├── differential_analysis.R    Tuni/Ctrl differential testing (limma)
 │   ├── glycoprotein_classification.R
-│   ├── Figure1.R … Figure6.R      Main-text figure generation
+│   ├── Figure1.R … Figure6*.R     Main-text figure generation
 │   ├── FigureS1.R, FigureS2.R     Supporting figures
-│   ├── Figure6E_*.py, Figure6F_*.py   PyMOL structure panels (site structural context)
-│   ├── generate_supporting_table_S1.R … S11   Supporting tables
-│   ├── spectrum_annotator.py,     Glycopeptide spectrum annotation
-│   │   fragment_calculator.py
-│   └── annotate_*.py, extract_*.py    Spectrum extraction / annotation utilities
-├── Manuscript/                    Manuscript, supporting information, revisions
+│   ├── pymol_site_panels.py/.csv  Table-driven PyMOL site panels (replaces 20 scripts)
+│   ├── Figure6F_*.py              PyMOL panels with per-protein domain/IDR colouring
+│   ├── fix_all_tables.R,          Supporting tables S1–S11
+│   │   update_supporting_tables.R, regenerate_S11.R
+│   ├── annotate_*.py              Spectrum annotation drivers
+│   │                              (engine: the installed spectrum_annotator_ddzby)
+│   ├── structuremap_analysis.py   pPSE / IDR classification from AlphaFold
+│   ├── export_web_data.py         Builds the docs/ data browser JSON
+│   └── _archive/                  Superseded scripts, with a README explaining each
+├── docs/                          Interactive data browser (GitHub Pages)
 ├── assets/                        README figures (TOC graphic)
 ├── LICENSE                        MIT (code)
 └── README.md
 ```
+
+Data lives on lab storage, not in the repository — see `00_FILE_MAP.md` at the data root for the
+layout, the network/Expansion split, and the commands that regenerate derived artifacts.
 
 ## Data availability
 
