@@ -197,7 +197,7 @@ async function renderOverview() {
   const total = k => CELLS.reduce((s, cell) => s + c[k][cell].n, 0);
   const stats = [
     { num: '1,109', lab: 'O-GlcNAc proteins', sub: 'union across three cell types' },
-    { num: '670', lab: 'O-GlcNAc sites', sub: 'localized, with AlphaFold structural context' },
+    { num: (meta.n_oglcnac_sites_union || 0).toLocaleString(), lab: 'O-GlcNAc sites', sub: 'localized, with AlphaFold structural context' },
     { num: '485', lab: 'O-GalNAc proteins', sub: 'identified across three cell types' },
     { num: '3', lab: 'human cell types', sub: 'HEK293T · HepG2 · Jurkat' },
   ];

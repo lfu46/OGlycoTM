@@ -32,6 +32,17 @@ ADJP_THRESH = 0.05      # Benjamini-Hochberg adjusted p threshold
 
 CHANNELS = ["Tuni_1", "Tuni_2", "Tuni_3", "Ctrl_4", "Ctrl_5", "Ctrl_6"]
 
+# Row counts of the published Supporting Tables, in CELLS order. The browser is
+# a second public view of the same results, so it has to agree with them exactly;
+# main() fails rather than publish a bundle that does not.
+PUBLISHED_COUNTS = {
+    "oglcnac_protein": ("S2", [773, 673, 671]),
+    "oglcnac_site": ("S6", [313, 257, 226]),
+    "ogalnac_protein": ("S8", [275, 173, 245]),
+    "ogalnac_site": ("S10", [171, 80, 154]),
+    "wp_protein": ("S4", [9201, 8104, 8672]),
+}
+
 os.makedirs(OUT, exist_ok=True)
 
 # ---------------------------------------------------------------- helpers
@@ -120,6 +131,44 @@ def parse_site_index(site_index):
     return m.group("prot"), m.group("res"), int(m.group("pos"))
 
 
+# ------------------------------------------------------- site confidence filter
+# The published site tables keep Level1, plus Level1b whose O-Pair localization
+# probability is >= 0.75 (fix_all_tables.R:351 for S5/S6, update_supporting_
+# tables.R:287 for S9/S10). The site DE CSVs carry neither column, so the
+# accepted set is rebuilt here from the site PSM tables -- without it the browser
+# publishes low-confidence sites the paper excluded.
+SITE_PROB_MIN = 0.75
+PROB_RE = re.compile(r"[0-9.]+(?=\]$)")
+
+
+def parse_site_probability(prob_str):
+    """Trailing localization probability of an O-Pair Site.Probabilities string."""
+    m = PROB_RE.search(str(prob_str or ""))
+    if not m:
+        return None
+    try:
+        return float(m.group(0))
+    except ValueError:
+        return None
+
+
+def high_conf_site_index(glyco):
+    """cell -> set of site_index values that pass the published filter."""
+    allow = {}
+    for cell in CELLS:
+        keep = set()
+        for r in read_csv(os.path.join(BASE, "site", f"{glyco}_site_{cell}.csv")):
+            level = (r.get("Confidence.Level") or "").strip()
+            if level == "Level1":
+                keep.add(r.get("site_index"))
+            elif level == "Level1b":
+                p = parse_site_probability(r.get("Site.Probabilities"))
+                if p is not None and p >= SITE_PROB_MIN:
+                    keep.add(r.get("site_index"))
+        allow[cell] = keep
+    return allow
+
+
 def write_json(name, obj):
     path = os.path.join(OUT, name)
     with open(path, "w") as f:
@@ -190,6 +239,7 @@ def build_protein_layer(tag, de_prefix, norm_prefix, gi_key):
 
 # ---------------------------------------------------------------- O-GlcNAc sites
 def build_oglcnac_sites():
+    allow = high_conf_site_index("OGlcNAc")
     feats = read_csv(os.path.join(BASE, "site_features", "OGlcNAc_site_features.csv"))
     # extra descriptive fields (Entry.Name, Protein.Description) from site DE
     de_extra = {}
@@ -209,11 +259,13 @@ def build_oglcnac_sites():
     records = []
     for r in feats:
         si = r.get("site_index")
+        cell = r.get("cell")
+        if si not in allow.get(cell, ()):
+            continue
         prot, res, pos = parse_site_index(si)
         if res is None:
             res = "S" if r.get("is_serine") in ("1", "1.0") else "T"
             pos = int(fnum(r.get("site_number")) or 0)
-        cell = r.get("cell")
         lfc = rnd(r.get("logFC"), 3)
         adjp = sig(r.get("adj.P.Val"), 3)
         flag = sig_flag(r.get("logFC"), r.get("adj.P.Val"))
@@ -248,6 +300,7 @@ def build_oglcnac_sites():
 
 # ---------------------------------------------------------------- O-GalNAc sites
 def build_ogalnac_sites():
+    allow = high_conf_site_index("OGalNAc")
     norm = {}
     for cell in CELLS:
         lk, _ = intensities_lookup(
@@ -258,6 +311,8 @@ def build_ogalnac_sites():
     for cell in CELLS:
         for r in read_csv(os.path.join(BASE, "differential_analysis", f"OGalNAc_site_DE_{cell}.csv")):
             si = r.get("site_index")
+            if si not in allow.get(cell, ()):
+                continue
             prot, res, pos = parse_site_index(si)
             if res is None:
                 res = (r.get("modified_residue") or "?")[:1]
@@ -298,35 +353,38 @@ def counts_by_cell(records):
     return out
 
 
+def check_against_published(counts):
+    """Abort if any layer disagrees with its Supporting Table row count."""
+    bad = []
+    for layer, (table, expected) in PUBLISHED_COUNTS.items():
+        got = [counts[layer][c]["n"] for c in CELLS]
+        mark = "ok" if got == expected else "MISMATCH"
+        print(f"  {layer:<18} {str(got):<22} Table {table:<3} {str(expected):<22} {mark}")
+        if got != expected:
+            bad.append(f"{layer}: browser {got} vs Table {table} {expected}")
+    if bad:
+        raise SystemExit(
+            "\nRefusing to write a bundle that disagrees with the published tables:\n  "
+            + "\n  ".join(bad)
+        )
+
+
 def main():
     print("Building web data bundle -> docs/data/")
-    sizes = {}
 
     print("O-GlcNAc proteins ...")
     og_p = build_protein_layer("O-GlcNAc protein", "OGlcNAc_protein_DE",
                                "OGlcNAc_protein_norm", "og_p")
-    sizes["oglcnac_protein.json"] = write_json("oglcnac_protein.json", og_p)
-
     print("O-GlcNAc sites ...")
     og_s = build_oglcnac_sites()
-    sizes["oglcnac_site.json"] = write_json("oglcnac_site.json", og_s)
-
     print("O-GalNAc proteins ...")
     ga_p = build_protein_layer("O-GalNAc protein", "OGalNAc_protein_DE",
                                "OGalNAc_protein_norm", "ga_p")
-    sizes["ogalnac_protein.json"] = write_json("ogalnac_protein.json", ga_p)
-
     print("O-GalNAc sites ...")
     ga_s = build_ogalnac_sites()
-    sizes["ogalnac_site.json"] = write_json("ogalnac_site.json", ga_s)
-
     print("Whole proteome ...")
     wp = build_protein_layer("WP protein", "WP_protein_DE",
                              "WP_protein_norm", "wp")
-    sizes["wp_protein.json"] = write_json("wp_protein.json", wp)
-
-    print("Gene index ...")
-    sizes["gene_index.json"] = write_json("gene_index.json", gene_index)
 
     meta = {
         "cells": CELLS,
@@ -340,7 +398,24 @@ def main():
             "wp_protein": counts_by_cell(wp),
         },
         "n_genes": len(gene_index),
+        # union across cell types -- the overview stat strip reads this rather
+        # than carrying its own copy of the number
+        "n_oglcnac_sites_union": len({r["site"] for r in og_s}),
     }
+
+    print("Checking against the published Supporting Tables ...")
+    check_against_published(meta["counts"])
+
+    sizes = {}
+    for name, payload in (
+        ("oglcnac_protein.json", og_p),
+        ("oglcnac_site.json", og_s),
+        ("ogalnac_protein.json", ga_p),
+        ("ogalnac_site.json", ga_s),
+        ("wp_protein.json", wp),
+        ("gene_index.json", gene_index),
+    ):
+        sizes[name] = write_json(name, payload)
     write_json("meta.json", meta)
 
     print(f"\nTotal bundle: {sum(sizes.values())/1024:.2f} MB across {len(sizes)+1} files")
