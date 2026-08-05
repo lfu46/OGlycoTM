@@ -182,12 +182,12 @@ PyMOL ray trace modes:
 
 ## MS/MS Spectrum Annotation (Python)
 
-**CRITICAL: ALWAYS use `mzml_utils.MzMLReader` for spectrum access — NEVER `pyteomics.mzml` (streaming, extremely slow). Always check for cached data (pickles, filter_string_cache.csv) before opening mzML files.**
+**CRITICAL: ALWAYS read spectra via `mzml_utils.open_spectra(path)` — NEVER `pyteomics.mzml` (streaming, extremely slow), and do not construct `MzMLReader` directly. `open_spectra` is a drop-in that returns a fast `SpectrumCache` when `<mzml_dir>/spectra_cache/<stem>.spectra.db` exists and an `MzMLReader` otherwise, so it is never slower and gets faster the moment a cache is built. Every active script here was converted 2026-08-04. Always check for cached data (pickles, filter_string_cache.csv) before opening mzML files.**
 
 **Use GlycoSpectrumAnnotator** (`spectrum_annotator_ddzby`, installed as editable package at `/Users/longpingfu/Downloads/GlycoSpectrumAnnotator/`) for all annotation. The local `spectrum_annotator.py` / `fragment_calculator.py` forks were **deleted 2026-08-04** — they were strict older subsets (646 vs 1490 and 1275 vs 1855 lines), missing the glycan library, N-glycan support, precursor-envelope filtering and the isotope-consistency flags. Every script behind a published spectrum already used the installed package. Import from `spectrum_annotator_ddzby` / `spectrum_annotator_ddzby.fragment_calculator`, never from a local module.
 
 Python modules for spectrum annotation:
-- **mzml_utils** (`import mzml_utils`) - Indexed mzML reader (`MzMLReader`), ion search, fragment calculator, deisotoping, spectral similarity, protease digestion
+- **mzml_utils** (`import mzml_utils`) - Cache-aware spectrum reader (`open_spectra`), ion search, fragment calculator, deisotoping, spectral similarity, protease digestion
 - **GlycoSpectrumAnnotator** (`spectrum_annotator_ddzby`) - Publication-quality annotated spectra with correct butterfly diagram, glycan labels, deisotoping, S/N filtering, charge-reduced exclusion
 - **OGlyco_DBA tools** (`/Users/longpingfu/Downloads/OGlyco_DBA/data_analysis/`) - `opair_utils.py`, `oglyco_validation.py`, `mass_degeneracy.py` for validation workflows
 - **extract_ethcd_spectra.py** - Extracts EThcD spectra from calibrated mzML files
