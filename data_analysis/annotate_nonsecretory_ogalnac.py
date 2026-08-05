@@ -15,8 +15,7 @@ import matplotlib.patches as mpatches
 import os
 import traceback
 
-from pyteomics import mzml as pyteomics_mzml
-from mzml_utils import PROTON, NEUTRON_MASS
+from mzml_utils import PROTON, NEUTRON_MASS, open_spectra
 from spectrum_annotator_ddzby import SpectrumAnnotator
 
 DATA_BASE = '/Volumes/cos-lab-rwu60/Longping/OGlycoTM_Final_Version'
@@ -181,44 +180,19 @@ def main():
             for offset in range(-20, 5):  # MS1 up to 20 before, HCD up to 4 before
                 need_scans.add(s + offset)
 
-        # Stream through mzML once, collect needed spectra
-        print(f'Streaming {os.path.basename(mzml_path)} ({len(group)} PSMs)...', flush=True)
+        # Indexed lookup of just the scans we need -- no full-file stream
+        print(f'Reading {os.path.basename(mzml_path)} ({len(group)} PSMs)...', flush=True)
         spectra = {}
-        reader = pyteomics_mzml.MzML(mzml_path)
-        for spec in reader:
-            sid = spec.get('id', '')
-            if 'scan=' not in sid:
-                continue
-            scan = int(sid.split('scan=')[-1])
-            if scan in need_scans:
-                mz_array = spec.get('m/z array', np.array([]))
-                int_array = spec.get('intensity array', np.array([]))
-                ms_level = spec.get('ms level', 0)
-                fs = spec.get('filter string', spec.get('scanList', {}).get('scan', [{}])[0].get('filter string', ''))
-
-                precursor_mz = None
-                if 'precursorList' in spec:
-                    precs = spec['precursorList'].get('precursor', [])
-                    if precs:
-                        ions = precs[0].get('selectedIonList', {}).get('selectedIon', [])
-                        if ions:
-                            precursor_mz = ions[0].get('selected ion m/z')
-                elif 'selected precursors' in spec:
-                    precs = spec['selected precursors']
-                    if precs:
-                        precursor_mz = precs[0].get('selected ion m/z')
-
-                rt = spec.get('scanList', {}).get('scan', [{}])[0].get('scan start time', 0)
-
+        with open_spectra(mzml_path) as reader:
+            for scan in sorted(need_scans):
+                spec = reader.get_spectrum(int(scan))
+                if spec is None:
+                    continue
                 spectra[scan] = {
-                    'mz': mz_array, 'intensity': int_array,
-                    'ms_level': ms_level, 'filter_string': str(fs),
-                    'precursor_mz': precursor_mz, 'rt': rt,
+                    'mz': spec.mz, 'intensity': spec.intensity,
+                    'ms_level': spec.ms_level, 'filter_string': str(spec.filter_string or ''),
+                    'precursor_mz': spec.precursor_mz, 'rt': spec.rt,
                 }
-
-            # Stop early if we have all needed scans
-            if scan > max(need_scans) + 100:
-                break
 
         print(f'  Collected {len(spectra)} spectra', flush=True)
 

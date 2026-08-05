@@ -18,7 +18,27 @@ import os
 # ============================================
 
 # File paths
-STRUCTURE_PATH = "/Volumes/cos-lab-rwu60/Longping/OGlycoTM_Final_Version/data_source/alphafold_structures/AF-Q9NYJ8-F1-model_v6.pdb"
+STRUCTURE_DIR = "/Volumes/cos-lab-rwu60/Longping/OGlycoTM_Final_Version/data_source/alphafold_structures"
+PROTEIN_ID = "Q9NYJ8"
+
+
+def resolve_structure(protein_id):
+    """Newest cached AlphaFold model for this accession.
+
+    Never hand-write an AlphaFold filename or version: v4/v5 files are deleted upstream and v6
+    abolished the -F2-/-F3- fragment scheme, so a pinned `model_v6` path is a latent breakage.
+    Take the newest cached file, or resolve one with mzml_utils.structure.fetch_structure()
+    (as data_analysis/pymol_site_panels.py does).
+    """
+    import glob
+    import re
+    hits = glob.glob(os.path.join(STRUCTURE_DIR, f"AF-{protein_id}-F1-model_v*.pdb"))
+    if not hits:
+        raise SystemExit(f"no cached AlphaFold model for {protein_id} in {STRUCTURE_DIR}")
+    return max(hits, key=lambda p: int(re.search(r"model_v(\d+)", p).group(1)))
+
+
+STRUCTURE_PATH = resolve_structure(PROTEIN_ID)
 OUTPUT_DIR = "/Volumes/cos-lab-rwu60/Longping/OGlycoTM_Final_Version/Figures/Figure6"
 
 # O-GlcNAc site data (HEK293T)

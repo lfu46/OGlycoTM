@@ -6,7 +6,6 @@ using calibrated mzML files and GlycoSpectrumAnnotator.
 Groups PSMs by raw file to read each calibrated mzML only once.
 """
 
-import numpy as np
 import pandas as pd
 import matplotlib
 matplotlib.use('Agg')
@@ -17,7 +16,8 @@ import re
 import time
 import traceback
 from pathlib import Path
-from pyteomics import mzml
+
+import mzml_utils
 
 from spectrum_annotator_ddzby import SpectrumAnnotator
 
@@ -101,27 +101,20 @@ def annotate_file(raw_file, cell_type, psm_group, output_base):
 
     scan_nums = set(psm_group['scan_num'].tolist())
 
-    # Read spectrum data from calibrated mzML
+    # Read spectrum data from calibrated mzML -- indexed lookup, not a full stream
     spectra = {}
-    reader = mzml.MzML(cal_mzml)
-    for spec in reader:
-        sid = spec.get('id', '')
-        if 'scan=' not in sid:
-            continue
-        scan = int(sid.split('scan=')[-1])
-        if scan in scan_nums:
-            # Look up activation from pre-built cache
-            act_type = ACTIVATION_CACHE.get((raw_file, scan), 'HCD')
-
+    with mzml_utils.open_spectra(cal_mzml) as reader:
+        for scan in scan_nums:
+            spec = reader.get_spectrum(int(scan))
+            if spec is None:
+                continue
             spectra[scan] = {
-                'mz': spec['m/z array'],
-                'intensity': spec['intensity array'],
-                'ms_level': spec.get('ms level', 2),
-                'activation': act_type,
+                'mz': spec.mz,
+                'intensity': spec.intensity,
+                'ms_level': spec.ms_level,
+                # activation from the pre-built cache, not re-derived per scan
+                'activation': ACTIVATION_CACHE.get((raw_file, scan), 'HCD'),
             }
-            if len(spectra) == len(scan_nums):
-                break
-    reader.close()
 
     # Annotate each PSM
     n_annotated = 0

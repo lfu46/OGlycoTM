@@ -17,18 +17,14 @@ Author: Claude Code / Longping Fu
 """
 
 import os
-import sys
 import json
 import numpy as np
 import pandas as pd
-from pyteomics import mzml
 from collections import defaultdict
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
 
-# Add GlycoSpectrumAnnotator to path
-sys.path.insert(0, '/Users/longpingfu/Downloads/GlycoSpectrumAnnotator')
-
+from mzml_utils import open_spectra
 from spectrum_annotator_ddzby import (
     SpectrumAnnotator,
     FragmentCalculator,
@@ -107,36 +103,25 @@ def find_calibrated_mzml(file_name, mzml_dir):
     return None
 
 
-def extract_spectrum_data(mzml_reader, scan_number):
+def extract_spectrum_data(reader, scan_number):
     """
     Extract complete spectrum data for a specific scan using indexed access.
     """
-    scan_id = f"controllerType=0 controllerNumber=1 scan={scan_number}"
-
-    try:
-        spectrum = mzml_reader.get_by_id(scan_id)
-    except KeyError:
-        # Try to find by scan number in ID
-        for spec_id in mzml_reader.index.keys():
-            if f"scan={scan_number}" in spec_id:
-                spectrum = mzml_reader.get_by_id(spec_id)
-                break
-        else:
-            return None
+    spectrum = reader.get_spectrum(int(scan_number))
+    if spectrum is None:
+        return None
 
     result = {
-        'mz_array': spectrum.get('m/z array', np.array([])),
-        'intensity_array': spectrum.get('intensity array', np.array([])),
-        'ms_level': spectrum.get('ms level'),
+        'mz_array': spectrum.mz,
+        'intensity_array': spectrum.intensity,
+        'ms_level': spectrum.ms_level,
     }
 
-    # Get precursor info
-    if 'precursorList' in spectrum:
-        precursor = spectrum['precursorList']['precursor'][0]
-        if 'selectedIonList' in precursor:
-            sel_ion = precursor['selectedIonList']['selectedIon'][0]
-            result['precursor_mz'] = sel_ion.get('selected ion m/z')
-            result['precursor_charge'] = sel_ion.get('charge state')
+    # MS1 reports precursor_mz as 0.0; leave both keys absent there, as the old
+    # pyteomics path did, since callers fall back with .get(..., 0)
+    if spectrum.precursor_mz:
+        result['precursor_mz'] = spectrum.precursor_mz
+        result['precursor_charge'] = spectrum.precursor_charge
 
     return result
 
@@ -284,7 +269,7 @@ def main():
             print(f"  Processing: {os.path.basename(mzml_path)} ({len(scans)} scans)...", end=" ", flush=True)
 
             try:
-                with mzml.MzML(mzml_path, use_index=True) as reader:
+                with open_spectra(mzml_path) as reader:
                     scans_processed = 0
 
                     for idx, scan_number, row in scans:

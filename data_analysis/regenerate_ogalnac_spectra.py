@@ -243,7 +243,7 @@ def main():
         mzml_path = os.path.join(MZML_DIR, f'{raw_file}_calibrated.mzML')
         if mzml_path not in readers:
             print(f'  Opening {os.path.basename(mzml_path)}...')
-            readers[mzml_path] = mzml_utils.MzMLReader(mzml_path)
+            readers[mzml_path] = mzml_utils.open_spectra(mzml_path)
         reader = readers[mzml_path]
 
         row = {

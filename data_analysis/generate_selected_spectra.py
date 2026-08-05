@@ -15,16 +15,12 @@ Date: 2026-02-03
 """
 
 import os
-import sys
 import json
 import subprocess
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
-
-# Add GlycoSpectrumAnnotator to path for updated annotator
-sys.path.insert(0, '/Users/longpingfu/Downloads/GlycoSpectrumAnnotator')
 
 from spectrum_annotator_ddzby import (
     SpectrumAnnotator,

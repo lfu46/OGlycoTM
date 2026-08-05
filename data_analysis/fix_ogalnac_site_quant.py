@@ -139,7 +139,7 @@ def main():
                     for suffix in ['_calibrated.mzML', '_mz_calibrated.mzML']:
                         path = os.path.join(CELL_MZML_DIRS[cell], f'{raw}{suffix}')
                         if os.path.exists(path):
-                            readers[raw] = mzml_utils.MzMLReader(path)
+                            readers[raw] = mzml_utils.open_spectra(path)
                             break
 
                 if raw in readers:

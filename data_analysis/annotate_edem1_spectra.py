@@ -56,7 +56,7 @@ for cell, basename, scan, charge, conf, prob, mod_string in PSMS:
 
     if mzml_path not in readers:
         print(f"  Opening {os.path.basename(mzml_path)}...")
-        readers[mzml_path] = mzml_utils.MzMLReader(mzml_path)
+        readers[mzml_path] = mzml_utils.open_spectra(mzml_path)
     reader = readers[mzml_path]
 
     # Get spectrum
