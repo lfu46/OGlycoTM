@@ -1,0 +1,36 @@
+cff-version: 1.2.0
+message: "If you use this code or data, please cite the article below (preferred-citation)."
+title: "OGlycoTM — data-analysis code for 'Systematic Quantification of Protein O-GlcNAcylation Reveals Common and Cell-Type-Specific Responses to N-Glycosylation Inhibition in Human Cells'"
+type: software
+authors:
+  - family-names: Fu
+    given-names: Longping
+    orcid: "https://orcid.org/0009-0006-4275-3264"
+    affiliation: "Georgia Institute of Technology"
+repository-code: "https://github.com/lfu46/OGlycoTM"
+url: "https://lfu46.github.io/OGlycoTM/"
+license: MIT
+keywords:
+  - O-GlcNAcylation
+  - N-glycosylation
+  - tunicamycin
+  - quantitative proteomics
+  - TMT
+preferred-citation:
+  type: article
+  title: "Systematic Quantification of Protein O-GlcNAcylation Reveals Common and Cell-Type-Specific Responses to N-Glycosylation Inhibition in Human Cells"
+  authors:
+    - family-names: Fu
+      given-names: Longping
+    - family-names: Yin
+      given-names: Kejun
+    - family-names: Xu
+      given-names: Xing
+    - family-names: Wu
+      given-names: Ronghu
+  journal: "Analytical Chemistry"
+  year: 2026
+  volume: 98
+  start: 15689
+  end: 15699
+  doi: "10.1021/acs.analchem.6c00972"
