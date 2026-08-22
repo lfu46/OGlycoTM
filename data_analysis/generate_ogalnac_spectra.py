@@ -140,7 +140,7 @@ def main():
         n_psms = len(psm_group)
         print(f'[{i+1}/{n_files}] {raw_file} ({cell_type}): {n_psms} PSMs...', end=' ', flush=True)
 
-        reader = mzml_utils.MzMLReader(cal_mzml)
+        reader = mzml_utils.open_spectra(cal_mzml)
         n_ok = 0
 
         for _, psm in psm_group.iterrows():

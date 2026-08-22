@@ -11,17 +11,13 @@ from __future__ import annotations
 
 import os
 import shutil
-import sys
 from pathlib import Path
 
 import matplotlib.pyplot as plt
 import pandas as pd
 
-sys.path.insert(0, "/Users/longpingfu/Downloads/GlycoSpectrumAnnotator")
-sys.path.insert(0, "/Users/longpingfu/Downloads/mzml-utils/src")
-
-from mzml_utils import MzMLReader  # noqa: E402
-from spectrum_annotator_ddzby import (  # noqa: E402
+from mzml_utils import open_spectra
+from spectrum_annotator_ddzby import (
     SpectrumAnnotator,
     parse_modifications_from_string,
 )
@@ -65,7 +61,7 @@ def raw_file_for_ethcd(cache: pd.DataFrame, cell_type: str, ethcd_scan: int) -> 
     return str(hit.iloc[0]["raw_file"])
 
 
-def find_precursor_matched_hcd(reader: MzMLReader, ethcd_scan: int, old_hcd_scan: int) -> tuple[int, str]:
+def find_precursor_matched_hcd(reader, ethcd_scan: int, old_hcd_scan: int) -> tuple[int, str]:
     ethcd = reader.get_spectrum(int(ethcd_scan))
     old = reader.get_spectrum(int(old_hcd_scan))
     if (
@@ -138,7 +134,7 @@ def bond_coverage(matched, peptide_len: int, ion_types: set[str]) -> tuple[int, 
     return len(bonds), f"{len(bonds)}/{peptide_len - 1}", sorted(labels)
 
 
-def annotate_hcd(row: pd.Series, reader: MzMLReader, hcd_scan: int, mzml_name: str, out_path: Path) -> dict:
+def annotate_hcd(row: pd.Series, reader, hcd_scan: int, mzml_name: str, out_path: Path) -> dict:
     spec = reader.get_spectrum(int(hcd_scan))
     mods = parse_modifications_from_string(str(row["assigned_modifications"]))
     ann = SpectrumAnnotator(
@@ -197,7 +193,7 @@ def main() -> None:
         "",
     ]
 
-    readers: dict[Path, MzMLReader] = {}
+    readers: dict[Path, object] = {}   # open_spectra returns MzMLReader or SpectrumCache
     try:
         for _, row in metrics.iterrows():
             old_dir = Path(row["candidate_dir"])
@@ -208,7 +204,7 @@ def main() -> None:
             raw_file = raw_file_for_ethcd(cache, str(row["cell_type"]), int(row["ethcd_scan"]))
             mzml_path = calibrated_mzml_path(str(row["cell_type"]), raw_file)
             if mzml_path not in readers:
-                readers[mzml_path] = MzMLReader(str(mzml_path))
+                readers[mzml_path] = open_spectra(str(mzml_path))
             reader = readers[mzml_path]
 
             checked_hcd, status = find_precursor_matched_hcd(

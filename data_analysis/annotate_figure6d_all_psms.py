@@ -203,7 +203,7 @@ def main():
                 if not os.path.exists(cal_mzml):
                     print(f'    SKIP: no mzML for {raw_file}')
                     continue
-                readers[raw_file] = mzml_utils.MzMLReader(cal_mzml)
+                readers[raw_file] = mzml_utils.open_spectra(cal_mzml)
             reader = readers[raw_file]
 
             # 1. MS1 isolation

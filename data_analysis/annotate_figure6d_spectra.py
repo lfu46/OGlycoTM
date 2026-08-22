@@ -258,7 +258,7 @@ def main():
             if not os.path.exists(cal_mzml):
                 print(f'  SKIP: no mzML for {raw_file}')
                 continue
-            readers[raw_file] = mzml_utils.MzMLReader(cal_mzml)
+            readers[raw_file] = mzml_utils.open_spectra(cal_mzml)
         reader = readers[raw_file]
 
         # 1. MS1 isolation check
@@ -316,7 +316,7 @@ def main():
                 if alt_raw not in readers:
                     cal_mzml = os.path.join(MZML_DIR, f'{alt_raw}_calibrated.mzML')
                     if os.path.exists(cal_mzml):
-                        readers[alt_raw] = mzml_utils.MzMLReader(cal_mzml)
+                        readers[alt_raw] = mzml_utils.open_spectra(cal_mzml)
                 if alt_raw in readers:
                     alt_path = os.path.join(folder, f'{site_id}_s{alt_scan}_{alt_psm["Confidence.Level"]}_{alt_act}.pdf')
                     if not os.path.exists(alt_path):
